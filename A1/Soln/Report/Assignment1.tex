@@ -130,20 +130,15 @@
 	\begin{homeworkProblem}
 		\begin{enumerate}
 			\item 
-			\noindent \textit{Given an $n×n$ image $I$, and $m×m$ filter $h$, what is the computational cost of computing $h ∗ I$ if $h$ is not separable?}
 			
 			The computational cost for $h * I$ when $h$ is not separable is $O(n^{2}m^{2})$.
 			
 			This because each pixel in $I$ gets computed for $m^2$ time, and there are $n^2$ pixels in total.
 			
 			\item 
-			\noindent \textit{What is the computational cost if h is separable?}
 			
 			The computational cost for $h * I$ when $h$ is not separable is $O(m^{2}2n)$.
 		\end{enumerate}
-		
-		
-		
 	\end{homeworkProblem}
 	\clearpage
 	
@@ -156,25 +151,38 @@
 	%	Inserting Images
 	%---------------------------------------------------------------------------------
 	\begin{homeworkProblem}
-		\noindent \textit{Images}
-		%		\begin{figure*}[!ht]
-		%		
-		%			\begin{subfigure}{.35\textwidth}
-		%				\includegraphics[width=.35\linewidth]{images/1.jpg}
-		%				\caption{caption}
-		%				\label{fig:1}
-		%			\end{subfigure}
-		%		
-		%			\caption{}
-		%			\label{fig:pcs}
-		%		\end{figure*}
-		%	
-				\begin{figure}[!ht]
-					\centering
-%					\includegraphics[width=.35\linewidth]{images/1.jpg}
-					\caption{caption}
-					\label{fig:1}
-				\end{figure}
+		
+		Canny Edge Detection Steps:
+		\begin{enumerate}
+			\item Filter the image with derivative of Gaussian in both horizontal and vertical directions.
+			
+			\begin{itemize}
+				\item The purpose of this is to smooth the image and remove the noise.
+				\item To do this, we apply Gaussian filter to convolve with the image.
+			\end{itemize}
+			
+			\item Find the magnitude and direction for the gradients
+			
+			\begin{itemize}
+				\item The purpose of this is to find the possible edges
+				\item To do this, we apply edge detection filters (for example, Sobel) with different directions and convolve with the image.
+			\end{itemize}
+			
+			\item Non-maximum suppression
+			
+			\begin{itemize}
+				\item Get rid of the spurious response from edge detection produced by noise.
+				\item To do this, we only take local maximum or minimum of the edges.
+			\end{itemize}
+		
+			\item Linking and Thresholding
+			
+			\begin{itemize}
+				\item The purpose of this is to connect the unlinked edges.
+				\item To do this, define 2 thresholds low and high. We use the high threshold's results to start the edge curves and use low threshold's results to connect the unlinked edges.
+			\end{itemize}
+			
+		\end{enumerate}
 		
 	\end{homeworkProblem}
 	\clearpage
