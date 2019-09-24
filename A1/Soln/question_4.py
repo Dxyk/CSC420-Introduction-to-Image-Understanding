@@ -116,7 +116,7 @@ def my_portrait_mode(img: np.ndarray,
     # a 3 * 3 filter was too weak. The effect was not obvious
     # blur_filter = 1 / 9 * np.ones((3, 3))
     blur_filter = 1 / 25 * np.ones((5, 5))
-    out_img = my_convolution(img, blur_filter, "full")
+    out_img = my_convolution(img, blur_filter, "same")
     out_img[top_left[0]: bottom_right[0], top_left[1]: bottom_right[1]] = \
         orig_crop
     return out_img

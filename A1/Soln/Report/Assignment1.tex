@@ -141,8 +141,7 @@
 		\end{enumerate}
 	\end{homeworkProblem}
 	
-	%----------------------------------------------------------------------------------
-
+	%---------------------------------------------------------------------------------
 	%---------------------------------------------------------------------------------
 	%	PROBLEM 2: 
 	%---------------------------------------------------------------------------------
@@ -182,11 +181,11 @@
 		
 	\end{homeworkProblem}
 	
-	%----------------------------------------------------------------------------------
-
+	%---------------------------------------------------------------------------------
 	%---------------------------------------------------------------------------------
 	%	PROBLEM 3: 
 	%---------------------------------------------------------------------------------
+	\newpage
 	\begin{homeworkProblem}
 		Laplacian of Gaussian filters are symmetrical. It has the shape of \ref{fig:3}. We can see that there is a decrease and then an increase going towards the center. This activates the edges because edges are composed of sudden change of pixel intensities.
 		
@@ -244,8 +243,47 @@
 				\endminipage\hfill
 			\end{figure}
 		
-		
+			
+			\newpage
 			\item 
+			
+			To achieve portrait mode, we want to blur the background. To do this a blur filter is chosen.
+			
+			The filter chosen was
+			$
+			\frac{1}{25}
+			\begin{bmatrix}
+			1 & 1 & 1 & 1 & 1 \\
+			1 & 1 & 1 & 1 & 1 \\
+			1 & 1 & 1 & 1 & 1 \\
+			1 & 1 & 1 & 1 & 1 \\
+			1 & 1 & 1 & 1 & 1
+			\end{bmatrix}
+			$.
+			
+			Note that we are not using the normal $3 \times 3$ blur matrix. This is because the output for $
+			\frac{1}{9}
+			\begin{bmatrix}
+			1 & 1 & 1 \\
+			1 & 1 & 1 \\
+			1 & 1 & 1 \\
+			\end{bmatrix}
+			$ is not obvious enough.
+			
+			See portrait mode and original photo bellow. The face for the dog is the focus rectangle. Notice that the hand and the ears are fuzzed out.
+			
+			\begin{figure}[!htb]
+				\minipage{0.45\textwidth}
+				\includegraphics[width=\linewidth]{images/4_c_out.jpg}
+				\caption{Portrait mode}
+				\label{fig:4.2.1}
+				\endminipage\hfill
+				\minipage{0.45\textwidth}
+				\includegraphics[width=\linewidth]{images/4_c_orig.jpg}
+				\caption{Original image}
+				\label{fig:4.2.2}
+				\endminipage\hfill
+			\end{figure}
 			
 		
 		\end{enumerate}
