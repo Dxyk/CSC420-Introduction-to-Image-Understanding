@@ -21,9 +21,18 @@ def is_separable_filter(h: np.ndarray) -> bool:
         horizontal_filter = v[:1, :] * s[0] ** .5
         print(vertical_filter)
         print(horizontal_filter)
-        # print(np.matmul(vertical_filter, horizontal_filter))
     return k == 1
 
 
 if __name__ == '__main__':
-    pass
+    print("{0} Question 5 {0}".format("=" * 20))
+    separable_filter = np.asarray([[1, 2, 1],
+                                   [2, 4, 2],
+                                   [1, 2, 1]]) / 16
+    inseparable_filter = np.asarray([[0, -1, 0],
+                                     [-1, 5, -1],
+                                     [0, -1, 0]])
+    print("{0} Separable {0}".format("=" * 10))
+    print(is_separable_filter(separable_filter))
+    print("{0} Inseparable {0}".format("=" * 10))
+    print(is_separable_filter(inseparable_filter))

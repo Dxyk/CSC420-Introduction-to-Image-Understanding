@@ -1,8 +1,40 @@
 from typing import Tuple
 
 import numpy as np
+from PIL import Image
 
 
+# ================== Helpers ==================
+def load_image(src_path: str) -> np.ndarray:
+    """
+    Loads a grayscale image from the src path into a np array.
+
+    :param src_path: the path for the source image
+    :return: the converted np array for the image
+    """
+    img = Image.open(src_path)
+    return np.asarray(img, dtype="float32")
+
+
+def save_image(np_data: np.ndarray, target_path: str) -> None:
+    """
+    Saves the np img to a file to the target path as a grayscale image.
+
+    :param np_data: the np img
+    :param target_path: the target file path
+    :return: None
+    """
+    if np_data.ndim == 2:
+        img = Image.fromarray(
+            np.asarray(np.clip(np_data, 0, 255), dtype="uint8"), "L")
+    elif np_data.ndim == 3:
+        img = Image.fromarray(np_data.astype(np.uint8))
+    else:
+        raise Exception("np_data must be either 2 or 3 dimensional")
+    img.save(target_path)
+
+
+# ==================== Question 4 ====================
 def zero_pad(img: np.ndarray, height: int, width: int) -> np.ndarray:
     """
     Zero pads an image with specified width and height
@@ -23,7 +55,6 @@ def zero_pad(img: np.ndarray, height: int, width: int) -> np.ndarray:
     return out_img
 
 
-# ==================== Question 4 ====================
 def my_correlation(img: np.ndarray, h: np.ndarray, mode: str) -> np.ndarray:
     """
     My implementation of the Correlation operator.
@@ -70,8 +101,6 @@ def my_correlation(img: np.ndarray, h: np.ndarray, mode: str) -> np.ndarray:
                              j: j + h_w] * h)
                 out_img[i][j] = res
     elif img.ndim == 3:
-        # TODO: this doesn't seem right yet
-        # could do my_correlation for each k and concatenate
         for i in range(0, row_range):
             for j in range(0, col_range):
                 for k in range(img.shape[2]):
@@ -123,4 +152,36 @@ def my_portrait_mode(img: np.ndarray,
 
 
 if __name__ == '__main__':
-    pass
+    gray_img = load_image("./gray.jpg")
+    color_img = load_image("./color.jpg")
+    q4c_img = load_image("./4_c_orig.jpg")
+
+    print("{0} Question 4 {0}".format("=" * 20))
+
+    print("{0} a {0}".format("=" * 10))
+    h = np.asarray([[0, 0, 0],
+                    [0, 2, 0],
+                    [0, 0, 0]]) \
+        - 1 / 9 * np.ones((3, 3))
+    for mode in ["valid", "same", "full"]:
+        print("{0} {1} {0}".format("=" * 5, mode))
+        print("processing gray")
+        gray_out = my_correlation(gray_img, h, mode)
+        save_image(gray_out, "out/question_4/gray/a_{}.jpg".format(mode))
+        print("processing color")
+        color_out = my_correlation(color_img, h, mode)
+        save_image(color_out, "out/question_4/color/a_{}.jpg".format(mode))
+
+    print("{0} b {0}".format("=" * 10))
+    for mode in ["valid", "same", "full"]:
+        print("{0} {1} {0}".format("=" * 5, mode))
+        print("processing gray")
+        gray_out = my_convolution(gray_img, h, mode)
+        save_image(gray_out, "out/question_4/gray/b_{}.jpg".format(mode))
+        print("processing color")
+        color_out = my_convolution(color_img, h, mode)
+        save_image(color_out, "out/question_4/color/b_{}.jpg".format(mode))
+
+    print("{0} c {0}".format("=" * 10))
+    q4c_out = my_portrait_mode(q4c_img, (125, 125), (300, 270))
+    save_image(q4c_out, "out/question_4/color/c_out.jpg")
