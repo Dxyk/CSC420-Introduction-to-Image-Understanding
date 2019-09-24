@@ -21,7 +21,7 @@ def is_separable_filter(h: np.ndarray) -> bool:
         horizontal_filter = v[:1, :] * s[0] ** .5
         print(vertical_filter)
         print(horizontal_filter)
-        print(np.matmul(vertical_filter, horizontal_filter))
+        # print(np.matmul(vertical_filter, horizontal_filter))
     return k == 1
 
 
