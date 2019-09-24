@@ -37,22 +37,24 @@ def save_image(np_data: np.ndarray, target_path: str) -> None:
 
 # ================== QUESTIONS ==================
 def question_4() -> None:
-    print("{0} Question 4 {0}".format("=" * 20))
-    sharpen_filter = np.asarray([[0, 0, 0], [0, 2, 0], [0, 0, 0]]) - \
-                     1 / 9 * np.ones((3, 3))
-    print(sharpen_filter)
-    for mode in ["valid", "same", "full"]:
-        print("{0} {1} {0}".format("=" * 10, mode))
-
-        print("processing correlation")
-        correlation_out_data = my_correlation(gray_img, sharpen_filter, mode)
-        save_image(correlation_out_data,
-                   "out/4_correlation_{}.jpg".format(mode))
-
-        print("processing convolution")
-        convolution_out_data = my_convolution(gray_img, sharpen_filter, mode)
-        save_image(convolution_out_data,
-                   "out/4_convolution_{}.jpg".format(mode))
+    # print("{0} Question 4 {0}".format("=" * 20))
+    # sharpen_filter = np.asarray([[0, 0, 0], [0, 2, 0], [0, 0, 0]]) - \
+    #                  1 / 9 * np.ones((3, 3))
+    # print(sharpen_filter)
+    # for mode in ["valid", "same", "full"]:
+    #     print("{0} {1} {0}".format("=" * 10, mode))
+    #
+    #     print("processing correlation")
+    #     correlation_out_data = my_correlation(gray_img, sharpen_filter, mode)
+    #     save_image(correlation_out_data,
+    #                "out/4_correlation_{}.jpg".format(mode))
+    #
+    #     print("processing convolution")
+    #     convolution_out_data = my_convolution(gray_img, sharpen_filter, mode)
+    #     save_image(convolution_out_data,
+    #                "out/4_convolution_{}.jpg".format(mode))
+    q4c_out = my_portrait_mode(q4c_img, (125, 125), (300, 270))
+    save_image(q4c_out, "out/4_c_out.jpg")
 
 
 def question_5() -> None:
@@ -104,6 +106,7 @@ def question_6() -> None:
 if __name__ == '__main__':
     gray_img = load_image("./gray.jpg")
     color_img = load_image("./color.jpg")
+    q4c_img = load_image("./4_c_orig.jpg")
 
     question_4()
 

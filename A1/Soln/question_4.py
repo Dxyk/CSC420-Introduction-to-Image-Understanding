@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 
 
@@ -69,6 +71,7 @@ def my_correlation(img: np.ndarray, h: np.ndarray, mode: str) -> np.ndarray:
                 out_img[i][j] = res
     elif img.ndim == 3:
         # TODO: this doesn't seem right yet
+        # could do my_correlation for each k and concatenate
         for i in range(0, row_range):
             for j in range(0, col_range):
                 for k in range(img.shape[2]):
@@ -95,7 +98,9 @@ def my_convolution(img: np.ndarray, h: np.ndarray, mode: str) -> np.ndarray:
     return my_correlation(img, h, mode)
 
 
-def my_portrait_mode(img: np.ndarray) -> np.ndarray:
+def my_portrait_mode(img: np.ndarray,
+                     top_left: Tuple[int, int],
+                     bottom_right: Tuple[int, int]) -> np.ndarray:
     """
     My implementation of the Portrait mode.
 
@@ -103,9 +108,18 @@ def my_portrait_mode(img: np.ndarray) -> np.ndarray:
     filter h has odd number of rows and columns
 
     :param img: an np array that represents the input grayscale image
+    :param top_left: top left coordinates of the focus rectangle
+    :param bottom_right: bottom right coordinates of the focus rectangle
     :return: the output image produced by the portrait mode
     """
-    pass
+    orig_crop = img[top_left[0]: bottom_right[0], top_left[1]: bottom_right[1]]
+    # a 3 * 3 filter was too weak. The effect was not obvious
+    # blur_filter = 1 / 9 * np.ones((3, 3))
+    blur_filter = 1 / 25 * np.ones((5, 5))
+    out_img = my_convolution(img, blur_filter, "full")
+    out_img[top_left[0]: bottom_right[0], top_left[1]: bottom_right[1]] = \
+        orig_crop
+    return out_img
 
 
 if __name__ == '__main__':
