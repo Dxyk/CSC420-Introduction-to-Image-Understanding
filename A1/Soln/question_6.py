@@ -102,7 +102,7 @@ if __name__ == '__main__':
     # part e
     print("{0} e {0}".format("=" * 10))
     noisy_color = add_salt_and_pepper_noise(color_img, 0.05)
-    save_image(noisy_color, "./out/question_6/color/e.jpg")
+    save_image(noisy_color, "./out/question_6/color/e_noisy.jpg")
 
-    # out_img = denoise_colored(noise_out)
-    # save_image(out_img, "./out/question_6/e_clean.jpg")
+    color_out = median_filter(noisy_color)
+    save_image(color_out, "./out/question_6/color/e_median.jpg")

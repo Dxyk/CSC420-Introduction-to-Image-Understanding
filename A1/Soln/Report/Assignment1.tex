@@ -124,30 +124,40 @@
 	\maketitle
 	\clearpage
 	
+	%=========================================================
 	%---------------------------------------------------------------------------------
-	%	PROBLEM 1
+	%	PROBLEM 1: 
 	%---------------------------------------------------------------------------------
+	%=========================================================
 	\begin{homeworkProblem}
+		
 		\begin{enumerate}
+			
 			\item 
 			
 			The computational cost for $h * I$ when $h$ is not separable is $O(n^{2}m^{2})$.
 			
-			This because each pixel in $I$ gets computed for $m^2$ time, and there are $n^2$ pixels in total.
+			This because each pixel in $I$ gets computed for $m^2$ times, and there are $n^2$ pixels in total.
 			
 			\item 
 			
 			The computational cost for $h * I$ when $h$ is not separable is $O(m^{2}2n)$.
+			
+			This is because each pixel in $I$ gets computed for $2m$ times (only vertical and horizontal edge detecting vectors), and there are $n^2$ pixels in total
+			
 		\end{enumerate}
+	
 	\end{homeworkProblem}
 	
-	%---------------------------------------------------------------------------------
+	%=========================================================
 	%---------------------------------------------------------------------------------
 	%	PROBLEM 2: 
 	%---------------------------------------------------------------------------------
+	%=========================================================
 	\begin{homeworkProblem}
 		
 		Canny Edge Detection Steps:
+		
 		\begin{enumerate}
 			\item Filter the image with derivative of Gaussian in both horizontal and vertical directions.
 			
@@ -174,20 +184,23 @@
 			
 			\begin{itemize}
 				\item The purpose of this is to connect the unlinked edges.
-				\item To do this, define 2 thresholds low and high. We use the high threshold's results to start the edge curves and use low threshold's results to connect the unlinked edges.
+				\item To do this, define 2 thresholds low and high. We use the high threshold's results to start the edge curves (get rid of the weak edges) and use low threshold's results to connect the unlinked edges.
 			\end{itemize}
 			
 		\end{enumerate}
 		
 	\end{homeworkProblem}
 	
-	%---------------------------------------------------------------------------------
+	%=========================================================
 	%---------------------------------------------------------------------------------
 	%	PROBLEM 3: 
 	%---------------------------------------------------------------------------------
+	%=========================================================
 	\newpage
 	\begin{homeworkProblem}
-		Laplacian of Gaussian filters are symmetrical. It has the shape of \ref{fig:3}. We can see that there is a decrease and then an increase going towards the center. This activates the edges because edges are composed of sudden change of pixel intensities.
+		Laplacian of Gaussian is the second derivative of Gaussian. This means that all the zero-crossing pixels are either local maxima or local minima. In an image, if a pixel is a local maximum or minimum, then this pixel is on an edge.
+		
+		Laplacian of Gaussian filters are also symmetrical. It has the shape of Figure \ref{fig:3} both vertically and horizontally, so it can detect edges both vertically and horizontally.
 		
 		\begin{figure}[!ht]
 			\centering
@@ -199,49 +212,80 @@
 	\end{homeworkProblem}
 	\clearpage
 	
-	%---------------------------------------------------------------------------------
+	%=========================================================
 	%---------------------------------------------------------------------------------
 	%	PROBLEM 4: 
 	%---------------------------------------------------------------------------------
+	%=========================================================
 	\begin{homeworkProblem}
 		
 		See code implementations in question\_4.py.
 		
 		\begin{enumerate}
+			
 			\item 
 			
-			See sample results in \ref{fig:4.1}. The results are the grayscale image correlation and convolution with the sharpening filter 
-			
-			\[
+			See results of my\_correlation in Figure \ref{fig:4.1.1}. The result is produced by correlating the original image (Figure \ref{fig:4.1.2}) with the filter
+			$
 			\begin{bmatrix}
-				0 & 0 & 0 \\
-				0 & 2 & 0  \\
-				0 & 0 & 0
+			0 & 0 & 0 \\
+			0 & 2 & 0  \\
+			0 & 0 & 0
 			\end{bmatrix} - \dfrac{1}{9}
 			\begin{bmatrix}
 			1 & 1 & 1 \\
 			1 & 1 & 1  \\
 			1 & 1 & 1
 			\end{bmatrix}
-			\]
+			$.
+			
+			Note that the image is sharper comparing to the original image. 
+			(One specific location to look for would be on the dome.)
+			
+			\item 
+			
+			See results of my\_convolution in Figure \ref{fig:4.1.3}. The result is produced by convolving the original image (Figure \ref{fig:4.1.2}) with the filter
+			$
+			\begin{bmatrix}
+			0 & 0 & 0 \\
+			0 & 2 & 0  \\
+			0 & 0 & 0
+			\end{bmatrix} - \dfrac{1}{9}
+			\begin{bmatrix}
+			1 & 1 & 1 \\
+			1 & 1 & 1  \\
+			1 & 1 & 1
+			\end{bmatrix}
+			$.
+
+			Note that the image is sharper comparing to the original image. 
+			(One specific location to look for would be on the dome.)
+			
 			
 			\begin{figure}[!htb]
-				\minipage{0.3\textwidth}
+				\begin{subfigure}{.3\textwidth}
 					\includegraphics[width=\linewidth]{images/question_4/gray/a_same.jpg}
-					\caption{Result of my\_correlation}
+					\centering
+					\caption{my\_correlation}
 					\label{fig:4.1.1}
-				\endminipage\hfill
-				\minipage{0.3\textwidth}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
 					\includegraphics[width=\linewidth]{images/gray.jpg}
+					\centering
 					\caption{Original image}
 					\label{fig:4.1.2}
-				\endminipage\hfill
-				\minipage{0.3\textwidth}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
 					\includegraphics[width=\linewidth]{images/question_4/gray/b_same.jpg}
-					\caption{Result of my\_convolution}
+					\centering
+					\caption{my\_correlation}
 					\label{fig:4.1.3}
-				\endminipage\hfill
+				\end{subfigure}
+				\centering
+				\label{fig:4.1}
 			\end{figure}
+		
+			Note: Since the sharpening filter is symmetrical, the results for correlation and convolution are the same. The difference between convolution and correlation is that the filter is flipped.
 		
 			
 			\newpage
@@ -261,40 +305,46 @@
 			\end{bmatrix}
 			$.
 			
-			Note that we are not using the normal $3 \times 3$ blur matrix. This is because the output for $
+			Note that the normal $3 \times 3$ blur matrix was not used. This is because the output for 
+			$
 			\frac{1}{9}
 			\begin{bmatrix}
 			1 & 1 & 1 \\
 			1 & 1 & 1 \\
 			1 & 1 & 1 \\
 			\end{bmatrix}
-			$ is not obvious enough.
+			$ 
+			is not obvious enough.
 			
-			See portrait mode and original photo bellow. The face for the dog is the focus rectangle. Notice that the hand and the ears are fuzzed out.
+			See portrait mode (Figure \ref{fig:4.2.1}) and original photo (Figure \ref{fig:4.2.2}) bellow. 
+			The face for the dog is the focus rectangle. Notice that the hand and the ears are fuzzed out.
 			
 			\begin{figure}[!htb]
-				\minipage{0.45\textwidth}
-				\includegraphics[width=\linewidth]{images/question_4/color/c_out.jpg}
-				\caption{Portrait mode}
-				\label{fig:4.2.1}
-				\endminipage\hfill
-				\minipage{0.45\textwidth}
-				\includegraphics[width=\linewidth]{images/4_c_orig.jpg}
-				\caption{Original image}
-				\label{fig:4.2.2}
-				\endminipage\hfill
+				\begin{subfigure}{.45\textwidth}
+					\includegraphics[width=\linewidth]{images/question_4/color/c_out.jpg}
+					\centering
+					\caption{Portrait mode}
+					\label{fig:4.2.1}
+				\end{subfigure}
+				\begin{subfigure}{.45\textwidth}
+					\includegraphics[width=\linewidth]{images/4_c_orig.jpg}
+					\centering
+					\caption{Original image}
+					\label{fig:4.2.2}
+				\end{subfigure}
+				\centering
+				\label{fig:4.2}
 			\end{figure}
 			
-		
 		\end{enumerate}
 	\end{homeworkProblem}
 	\clearpage
 	
+	%=========================================================
 	%---------------------------------------------------------------------------------
+	%	PROBLEM 5: 
 	%---------------------------------------------------------------------------------
-	%---------------------------------------------------------------------------------
-	%	PROBLEM 5:
-	%---------------------------------------------------------------------------------
+	%=========================================================
 	\begin{homeworkProblem}
 		
 		See code implementations in question\_5.py.
@@ -314,51 +364,58 @@
 			
 			\item 
 			
-			The Separable filter is
-			$
-			\dfrac{1}{16}
-			\begin{bmatrix}
-			1 & 2 & 1 \\
-			2 & 4 & 2 \\
-			1 & 2 & 1
-			\end{bmatrix}
-			$.
+			\begin{itemize}
+				\item 
+				The Separable filter is
+				$
+				\dfrac{1}{16}
+				\begin{bmatrix}
+				1 & 2 & 1 \\
+				2 & 4 & 2 \\
+				1 & 2 & 1
+				\end{bmatrix}
+				$.
+				
+				The output for the separable filter is 
+				
+				\begin{lstlisting}
+			[[-0.25]
+			[-0.5 ]
+			[-0.25]]
 			
-			The output for the separable filter is 
+			[[-0.25 -0.5  -0.25]]
+			True
+				\end{lstlisting}
+				
+				\item
+				
+				The Inseparable filter is 
+				$
+				\begin{bmatrix}
+				0 & -1 & 0 \\
+				-1 & 5 & -1 \\
+				0 & -1 & 0
+				\end{bmatrix}
+				$.
+				
+				The output for the separable filter is 
+				
+				\begin{lstlisting}
+			False
+				\end{lstlisting}
+			\end{itemize}
 			
-			\begin{lstlisting}
-	[[-0.25]
-	[-0.5 ]
-	[-0.25]]
-	
-	[[-0.25 -0.5  -0.25]]
-	True
-			\end{lstlisting}
 			
-			The Inseparable filter is 
-			$
-			\begin{bmatrix}
-			0 & -1 & 0 \\
-			-1 & 5 & -1 \\
-			0 & -1 & 0
-			\end{bmatrix}
-			$.
-			
-			The output for the separable filter is 
-			
-			\begin{lstlisting}
-	False
-			\end{lstlisting}
 			
 		\end{enumerate}
 	\end{homeworkProblem}
 	\clearpage
 	
+	%=========================================================
 	%---------------------------------------------------------------------------------
+	%	PROBLEM 6: 
 	%---------------------------------------------------------------------------------
-	%---------------------------------------------------------------------------------
-	%	PROBLEM 6:
-	%---------------------------------------------------------------------------------
+	%=========================================================
 	\begin{homeworkProblem}
 
 		See code implementations in question\_6.py.
@@ -367,26 +424,29 @@
 			%a
 			\item 
 			
-			The image with noise is as follows
-			
+			The image with noise is shown in Figure \ref{fig:6.1.1}.
 			
 			\begin{figure}[!htb]
-				\minipage{0.45\textwidth}
-				\includegraphics[width=\linewidth]{images/question_6/gray/a.jpg}
-				\caption{Result of add\_rand\_correlation}
-				\label{fig:6.1.1}
-				\endminipage\hfill
-				\minipage{0.45\textwidth}
-				\includegraphics[width=\linewidth]{images/gray.jpg}
-				\caption{Original image}
-				\label{fig:6.1.2}
-				\endminipage\hfill
+				\begin{subfigure}{.45\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/gray/a.jpg}
+					\centering
+					\caption{add\_rand\_correlation}
+					\label{fig:6.1.1}
+				\end{subfigure}
+				\begin{subfigure}{.45\textwidth}
+					\includegraphics[width=\linewidth]{images/gray.jpg}
+					\centering
+					\caption{Original image}
+					\label{fig:6.1.2}
+				\end{subfigure}
+				\centering
+				\label{fig:6.1}
 			\end{figure}
 		
 			% b
 			\item 
 			
-			The recovered image is as follows. The chosen filter was the mean filter
+			The recovered image is shown in Figure \ref{fig:6.2.2}. The chosen filter was the mean filter
 			$
 			\dfrac{1}{9}
 			\begin{bmatrix}
@@ -397,75 +457,129 @@
 			$. This was chosen because averaging the pixels will reduce the effect of the noise and make the noisy pixel resemble the average of its neighbors.
 			
 			\begin{figure}[!htb]
-				\minipage{0.3\textwidth}
-				\includegraphics[width=\linewidth]{images/question_6/gray/a.jpg}
-				\caption{add\_rand\_correlation}
-				\label{fig:6.2.1}
-				\endminipage\hfill
-				\minipage{0.3\textwidth}
-				\includegraphics[width=\linewidth]{images/question_6/gray/b.jpg}
-				\caption{The recovered image}
-				\label{fig:6.2.2}
-				\endminipage\hfill
-				\minipage{0.3\textwidth}
-				\includegraphics[width=\linewidth]{images/gray.jpg}
-				\caption{The original image}
-				\label{fig:6.2.3}
-				\endminipage\hfill
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/gray/a.jpg}
+					\centering
+					\caption{add\_rand\_correlation}
+					\label{fig:6.2.1}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/gray/b.jpg}
+					\centering
+					\caption{The recovered image}
+					\label{fig:6.2.2}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/gray.jpg}
+					\centering
+					\caption{Original image}
+					\label{fig:6.2.3}
+				\end{subfigure}
+				\centering
+				\caption{}
+				\label{fig:6.2}
 			\end{figure}
 			
-
 			% c
 			\newpage
 			\item 
 			
-			The image with salt and pepper noise is as bellow:
+			The image with salt and pepper noise is shown in Figure \ref{fig:6.3.1}. Notice that there are random black and white pixels across the image.
 			
 			\begin{figure}[!htb]
-				\minipage{0.45\textwidth}
-				\includegraphics[width=\linewidth]{images/question_6/gray/c.jpg}
-				\caption{add\_salt\_and\_pepper}
-				\label{fig:6.4.1}
-				\endminipage\hfill
-				\minipage{0.45\textwidth}
-				\includegraphics[width=\linewidth]{images/gray.jpg}
-				\caption{The original image}
-				\label{fig:6.4.2}
-				\endminipage\hfill
+				\begin{subfigure}{.45\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/gray/c.jpg}
+					\centering
+					\caption{add\_salt\_and\_pepper}
+					\label{fig:6.3.1}
+				\end{subfigure}
+				\begin{subfigure}{.45\textwidth}
+					\includegraphics[width=\linewidth]{images/gray.jpg}
+					\centering
+					\caption{Original image}
+					\label{fig:6.3.2}
+				\end{subfigure}
+			\centering
+			\caption{}
+			\label{fig:6.3}
 			\end{figure}
 		
 			% d
 			\item 
 			
-			Trying to recover salt and pepper noisy image does not yield a very good result: the output image is still noisy. The chosen filter is the median filter. This is achieved with OpenCV's $medianBlur$ method. This works because salt and pepper noise is very extreme. The pixel has signal of either 1 or 0 (white or black). This affects the mean vastly, where as it does not really affect the median of the nearby pixels.
+			Trying to recover salt and pepper noisy image with the mean filter does not yield a very good result: the output image is still noisy. The result is shown in \ref{fig:6.4.1}.
+			
+			The chosen filter is the median filter. This is achieved with OpenCV's $medianBlur$ method. This works because salt and pepper noise is very extreme. The pixel has signal of either 1 or 0 (white or black). This affects the mean vastly, where as it does not really affect the median of the nearby pixels. By taking the mean of the near by pixels, we will likely get a better resemblance of the neighbor pixels. The result is shown in Figure \ref{fig:6.4.2}.
 			
 			\begin{figure}[!htb]
-				\minipage{0.3\textwidth}
-				\includegraphics[width=\linewidth]{images/question_6/gray/d_mean.jpg}
-				\caption{mean filter}
-				\label{fig:6.5.1}
-				\endminipage\hfill
-				\minipage{0.3\textwidth}
-				\includegraphics[width=\linewidth]{images/question_6/gray/d_median.jpg}
-				\caption{median filter}
-				\label{fig:6.5.2}
-				\endminipage\hfill
-				\minipage{0.3\textwidth}
-				\includegraphics[width=\linewidth]{images/gray.jpg}
-				\caption{The original image}
-				\label{fig:6.5.3}
-				\endminipage\hfill
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/gray/d_mean.jpg}
+					\centering
+					\caption{mean filter}
+					\label{fig:6.4.1}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/gray/d_median.jpg}
+					\centering
+					\caption{median filter}
+					\label{fig:6.4.2}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/gray.jpg}
+					\centering
+					\caption{Original image}
+					\label{fig:6.4.3}
+				\end{subfigure}
+			\centering
+			\caption{}
+			\label{fig:6.4}
 			\end{figure}
 			
 			% e
 			\newpage
 			\item 
+			The salt and pepper noisy image applied to the color image is shown in \ref{fig:6.5.1}. This is achieved by adding salt and pepper noise to each channel and then combining them.
+			
+			When applying the median filter as in part d, most of the noise are gone. 
+			
+			As in part d, this is achieved with OpenCV's $medianBlur$ method. By taking the mean of the near by pixels, we will likely get a better resemblance of the neighbor pixels. The result is shown in Figure \ref{fig:6.5.2}.
+			
+			We can see that the median filter image (Figure \ref{fig:6.5.2}) is slightly blurred when comparing to the original image (Figure \ref{fig:6.5.3}). This is because by taking the median, the pixel will be affected by its neighbor pixels.
+			
+			
+			\begin{figure}[!htb]
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/color/e_noisy.jpg}
+					\centering
+					\caption{salt\_and\_pepper noisy image}
+					\label{fig:6.5.1}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/question_6/color/e_median.jpg}
+					\centering
+					\caption{median filter}
+					\label{fig:6.5.2}
+				\end{subfigure}
+				\begin{subfigure}{.3\textwidth}
+					\includegraphics[width=\linewidth]{images/color.jpg}
+					\centering
+					\caption{Original image}
+					\label{fig:6.5.3}
+				\end{subfigure}
+				\centering
+				\caption{}
+				\label{fig:6.5}
+			\end{figure}
 			
 			
 		\end{enumerate}
 	\end{homeworkProblem}
 	\clearpage
 	
+	%=========================================================
 	%---------------------------------------------------------------------------------
+	%	END
+	%---------------------------------------------------------------------------------
+	%=========================================================
 	
 \end{document}
