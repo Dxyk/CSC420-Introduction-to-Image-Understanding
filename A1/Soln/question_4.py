@@ -10,9 +10,14 @@ def zero_pad(img: np.ndarray, height: int, width: int) -> np.ndarray:
     :param width: the width for the padding
     :return: the zero-padded image
     """
-    img_h, img_w = img.shape
-    out_img = np.zeros((img_h + 2 * height, img_w + 2 * width))
-    out_img[height:img_h + height, width:img_w + width] = img
+    if img.ndim == 3:
+        img_h, img_w, num_channel = img.shape
+        out_img = np.zeros((img_h + 2 * height, img_w + 2 * width, 3))
+        out_img[height:img_h + height, width:img_w + width, :] = img
+    else:
+        img_h, img_w = img.shape
+        out_img = np.zeros((img_h + 2 * height, img_w + 2 * width))
+        out_img[height:img_h + height, width:img_w + width] = img
     return out_img
 
 
@@ -29,32 +34,47 @@ def my_correlation(img: np.ndarray, h: np.ndarray, mode: str) -> np.ndarray:
     :param mode: the mode. Possible values are 'valid', 'same' or 'full'
     :return: the output image produced according to the mode
     """
+    if mode not in ["valid", "same", "full"]:
+        raise Exception("mode should have value of 'valid', 'same' or 'full'.")
+    if img.ndim < 2 or img.ndim > 3:
+        raise Exception("image dimension must be 2 or 3")
+
     h_h, h_w = h.shape
     half_h_h, half_h_w = h_h // 2, h_w // 2
 
     # Figure out the zero padding sizes according to mode
     if mode == "valid":
-        pad_image = zero_pad(img, 0, 0)
-        out_img = np.zeros(pad_image.shape)
+        padded_image = zero_pad(img, 0, 0)
+        row_range = img.shape[0] - half_h_w * 2
+        col_range = img.shape[1] - half_h_h * 2
     elif mode == "same":
-        pad_image = zero_pad(img, half_h_h, half_h_w)
-        out_img = np.zeros(pad_image.shape)
-    elif mode == "full":
-        pad_image = zero_pad(img, h_h, h_w)
-        out_img = np.zeros(pad_image.shape)
-    else:
-        raise Exception("mode should have value of 'valid', 'same' or 'full'.")
+        padded_image = zero_pad(img, half_h_h, half_h_w)
+        row_range = img.shape[0]
+        col_range = img.shape[1]
+    else:  # full
+        padded_image = zero_pad(img, h_h, h_w)
+        row_range = padded_image.shape[0] - half_h_w * 2
+        col_range = padded_image.shape[1] - half_h_h * 2
 
-    for i in range(half_h_h, pad_image.shape[0] - half_h_h):
-        for j in range(half_h_w, pad_image.shape[1] - half_h_h):
-            # print(i, j,
-            #       pad_image[i - half_h_h: i + half_h_h + 1,
-            #                 j - half_h_w: j + half_h_w + 1].shape)
-            tmp = np.sum(
-                pad_image[i - half_h_h: i + half_h_h + 1,
-                j - half_h_w: j + half_h_w + 1]
-                * h)
-            out_img[i - half_h_h][j - half_h_w] = tmp
+    if img.ndim == 2:
+        out_img = np.zeros((row_range, col_range))
+    else:  # 3 dimension
+        out_img = np.zeros((row_range, col_range, 3))
+
+    if img.ndim == 2:
+        for i in range(0, row_range):
+            for j in range(0, col_range):
+                res = np.sum(padded_image[i: i + h_h,
+                             j: j + h_w] * h)
+                out_img[i][j] = res
+    elif img.ndim == 3:
+        # TODO: this doesn't seem right yet
+        for i in range(0, row_range):
+            for j in range(0, col_range):
+                for k in range(img.shape[2]):
+                    res = np.sum(padded_image[i: i + h_h,
+                                 j: j + h_w, k] * h)
+                    out_img[i][j][k] = res
 
     return out_img
 

@@ -105,8 +105,8 @@ if __name__ == '__main__':
     gray_img = load_image("./gray.jpg")
     color_img = load_image("./color.jpg")
 
-    # question_4()
+    question_4()
 
     # question_5()
 
-    question_6()
+    # question_6()

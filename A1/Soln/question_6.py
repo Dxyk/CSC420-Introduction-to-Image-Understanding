@@ -33,7 +33,7 @@ def add_salt_and_pepper_noise(img: np.ndarray, d: float) -> np.ndarray:
         out = np.where(prob_matrix < (1 - d / 2), out, 0)
     elif img.ndim == 3:
         # print(img.shape)
-        # r, g, b = img[:, :, 0], img[:, :, 0], img[:, :, 0]
+        r, g, b = img[:, :, 0], img[:, :, 0], img[:, :, 0]
         # print(r.shape)
         # print(g.shape)
         # print(b.shape)
@@ -47,15 +47,15 @@ def add_salt_and_pepper_noise(img: np.ndarray, d: float) -> np.ndarray:
         # b = np.where(prob_matrix > d / 2, b, 1)
         # b = np.where(prob_matrix < (1 - d / 2), b, 0)
         #
-        # out = np.stack([r, g, b], axis=2)
-        # print(out)
-        # print(out.shape)
-        # for i in range(img.shape[2]):
-        #     prob_matrix = np.random.rand(out.shape[0], out.shape[1])
-        #     out[:, :, i] = np.where(prob_matrix > d / 6, out[:, :, i],
-        #                             np.ones((out.shape[0], out.shape[1])))
-        #     out[:, :, i] = np.where(prob_matrix < (1 - d / 6), out[:, :, i],
-        #                             np.ones((out.shape[0], out.shape[1])))
+        out = np.stack([r, g, b], axis=2)
+        print(out)
+        print(out.shape)
+        for i in range(img.shape[2]):
+            prob_matrix = np.random.rand(out.shape[0], out.shape[1])
+            out[:, :, i] = np.where(prob_matrix > d / 6, out[:, :, i],
+                                    np.ones((out.shape[0], out.shape[1])))
+            out[:, :, i] = np.where(prob_matrix < (1 - d / 6), out[:, :, i],
+                                    np.ones((out.shape[0], out.shape[1])))
     return out
 
 
@@ -77,7 +77,7 @@ def denoise_colored(img: np.ndarray) -> np.ndarray:
     :return: the clean image
     """
     # converted_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    return cv2.fastNlMeansDenoisingColored(converted_img)
+    return cv2.fastNlMeansDenoisingColored(img)
 
 
 if __name__ == '__main__':
