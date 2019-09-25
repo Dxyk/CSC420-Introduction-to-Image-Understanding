@@ -49,6 +49,11 @@ def median_filter(img: np.ndarray) -> np.ndarray:
 
 
 if __name__ == '__main__':
+    from pathlib import Path
+
+    Path('out/question_6/gray/').mkdir(parents=True, exist_ok=True)
+    Path('out/question_6/color/').mkdir(parents=True, exist_ok=True)
+
     gray_img = load_image("./gray.jpg")
     color_img = load_image("./color.jpg")
 
@@ -105,5 +110,8 @@ if __name__ == '__main__':
     noisy_color = add_salt_and_pepper_noise(color_img, 0.05)
     save_image(noisy_color, "./out/question_6/color/e_noisy.jpg")
 
-    color_out = median_filter(noisy_color)
+    # median filter for each channel and join back together
+    color_out = np.zeros(noisy_color.shape)
+    for k in range(noisy_color.shape[2]):
+        color_out[:, :, k] = median_filter(noisy_color[:, :, k])
     save_image(color_out, "./out/question_6/color/e_median.jpg")

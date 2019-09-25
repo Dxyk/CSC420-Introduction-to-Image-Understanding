@@ -137,11 +137,11 @@
 			
 			The computational cost for $h * I$ when $h$ is not separable is $O(n^{2}m^{2})$.
 			
-			This because each pixel in $I$ gets computed for $m^2$ times, and there are $n^2$ pixels in total.
+			This is because each pixel in $I$ gets computed for $m^2$ times, and there are $n^2$ pixels in total.
 			
 			\item 
 			
-			The computational cost for $h * I$ when $h$ is not separable is $O(m^{2}2n)$.
+			The computational cost for $h * I$ when $h$ is separable is $O(m^{2}2n)$.
 			
 			This is because each pixel in $I$ gets computed for $2m$ times (only vertical and horizontal edge detecting vectors), and there are $n^2$ pixels in total
 			
@@ -159,32 +159,34 @@
 		Canny Edge Detection Steps:
 		
 		\begin{enumerate}
+			
 			\item Filter the image with derivative of Gaussian in both horizontal and vertical directions.
 			
 			\begin{itemize}
-				\item The purpose of this is to smooth the image and remove the noise.
+				\item The purpose of this step is to smooth the image and remove random noise.
+				
 				\item To do this, we apply Gaussian filter to convolve with the image.
 			\end{itemize}
 			
-			\item Find the magnitude and direction for the gradients
+			\item Find the magnitude and direction for the gradients.
 			
 			\begin{itemize}
-				\item The purpose of this is to find the possible edges
-				\item To do this, we apply edge detection filters (for example, Sobel) with different directions and convolve with the image.
+				\item The purpose of this step is to find all possible edges
+				\item To do this, we apply edge detection filters (for example, Sobel) with different directions (vertical, horizontal and diagonal) and convolve with the image.
 			\end{itemize}
 			
 			\item Non-maximum suppression
 			
 			\begin{itemize}
-				\item Get rid of the spurious response from edge detection produced by noise.
+				\item The purpose of this step is to get rid of the spurious response from edge detection produced by noise.
 				\item To do this, we only take local maximum or minimum of the edges.
 			\end{itemize}
 		
 			\item Linking and Thresholding
 			
 			\begin{itemize}
-				\item The purpose of this is to connect the unlinked edges.
-				\item To do this, define 2 thresholds low and high. We use the high threshold's results to start the edge curves (get rid of the weak edges) and use low threshold's results to connect the unlinked edges.
+				\item The purpose of this step is to connect the unlinked edges.
+				\item To do this, define 2 thresholds: low and high. We use the high threshold's results to start the edge curves (get rid of the weak edges) and use low threshold's results to connect the unlinked edges.
 			\end{itemize}
 			
 		\end{enumerate}
@@ -204,7 +206,7 @@
 		
 		\begin{figure}[!ht]
 			\centering
-			\includegraphics[width=.5\linewidth]{images/03_01.png}
+			\includegraphics[width=0.75\linewidth]{images/03_01.png}
 			\caption{Laplacian of Gaussian with $\sigma = 2.5$}
 			\label{fig:3}
 		\end{figure}
@@ -225,7 +227,7 @@
 			
 			\item 
 			
-			See results of my\_correlation in Figure \ref{fig:4.1.1}. The result is produced by correlating the original image (Figure \ref{fig:4.1.2}) with the filter
+			See results of my\_correlation in Figure \ref{fig:4.1.1}. The result is produced by correlating the original image (Figure \ref{fig:4.1.2}) with the sharpening filter
 			$
 			\begin{bmatrix}
 			0 & 0 & 0 \\
@@ -240,11 +242,11 @@
 			$.
 			
 			Note that the image is sharper comparing to the original image. 
-			(One specific location to look for would be on the dome.)
+			(One specific location to look for would be the edge of the dome.)
 			
 			\item 
 			
-			See results of my\_convolution in Figure \ref{fig:4.1.3}. The result is produced by convolving the original image (Figure \ref{fig:4.1.2}) with the filter
+			See results of my\_convolution in Figure \ref{fig:4.1.3}. The result is produced by convolving the original image (Figure \ref{fig:4.1.2}) with the sharpening filter
 			$
 			\begin{bmatrix}
 			0 & 0 & 0 \\
@@ -259,7 +261,7 @@
 			$.
 
 			Note that the image is sharper comparing to the original image. 
-			(One specific location to look for would be on the dome.)
+			(One specific location to look for would be the edge of the dome.)
 			
 			
 			\begin{figure}[!htb]
@@ -282,10 +284,11 @@
 					\label{fig:4.1.3}
 				\end{subfigure}
 				\centering
+				\caption{}
 				\label{fig:4.1}
 			\end{figure}
 		
-			Note: Since the sharpening filter is symmetrical, the results for correlation and convolution are the same. The difference between convolution and correlation is that the filter is flipped.
+			Note: Since the sharpening filter is symmetrical, the results for correlation and convolution are the same, but they are different in implementation. The difference between convolution and correlation is that the filter is flipped in convolution.
 		
 			
 			\newpage
@@ -314,9 +317,9 @@
 			1 & 1 & 1 \\
 			\end{bmatrix}
 			$ 
-			is not obvious enough.
+			is not obvious enough. Taking average of the $3 \times 3$ neighbor is less powerful than taking average of the $5 \times 5$ neighbor.
 			
-			See portrait mode (Figure \ref{fig:4.2.1}) and original photo (Figure \ref{fig:4.2.2}) bellow. 
+			See portrait mode and original photo in Figure \ref{fig:4.2}. 
 			The face for the dog is the focus rectangle. Notice that the hand and the ears are fuzzed out.
 			
 			\begin{figure}[!htb]
@@ -333,6 +336,7 @@
 					\label{fig:4.2.2}
 				\end{subfigure}
 				\centering
+				\caption{}
 				\label{fig:4.2}
 			\end{figure}
 			
@@ -352,7 +356,7 @@
 		\begin{enumerate}
 			\item 
 			
-			Separable Filters allow correlation and convolution operations to be performed at $2K$ operation cost instead of $K^2$. This is because separable filters are able to be split into $1D$ horizontal and $1D$ vertical filters. The result of convolving the image with the 2 $1D$ filters is the same as convolving the image with the original separable filter.
+			Separable Filters allow correlation and convolution operations to be performed at $2K$ operation cost instead of $K^2$. This is because separable filters are able to be split into $1D$ horizontal and $1D$ vertical filters. The result of convolving the image with the two $1D$ filters is the same as convolving the image with the original separable filter.
 			
 			This is achieved when when the Singular Value Decomposition has only one non-zero single value.
 			
@@ -418,19 +422,19 @@
 	%=========================================================
 	\begin{homeworkProblem}
 
-		See code implementations in question\_6.py.
+		See code implementations in question\_6.py. Notice the 
 
 		\begin{enumerate}
 			%a
 			\item 
 			
-			The image with noise is shown in Figure \ref{fig:6.1.1}.
+			The image with noise is shown in Figure \ref{fig:6.1.1}. Notice that Figure \ref{fig:6.1.1} contains random noise (One specific location to look for is the sky).
 			
 			\begin{figure}[!htb]
 				\begin{subfigure}{.45\textwidth}
 					\includegraphics[width=\linewidth]{images/question_6/gray/a.jpg}
 					\centering
-					\caption{add\_rand\_correlation}
+					\caption{add\_rand\_noise}
 					\label{fig:6.1.1}
 				\end{subfigure}
 				\begin{subfigure}{.45\textwidth}
@@ -439,6 +443,7 @@
 					\caption{Original image}
 					\label{fig:6.1.2}
 				\end{subfigure}
+				\caption{}
 				\centering
 				\label{fig:6.1}
 			\end{figure}
@@ -454,13 +459,14 @@
 			1 & 1 & 1 \\
 			1 & 1 & 1
 			\end{bmatrix}
-			$. This was chosen because averaging the pixels will reduce the effect of the noise and make the noisy pixel resemble the average of its neighbors.
+			$. 
+			This filter was chosen because averaging the pixels will reduce the effect of the noise and make the noisy pixel resemble the average of its neighbors.
 			
 			\begin{figure}[!htb]
 				\begin{subfigure}{.3\textwidth}
 					\includegraphics[width=\linewidth]{images/question_6/gray/a.jpg}
 					\centering
-					\caption{add\_rand\_correlation}
+					\caption{add\_rand\_noise}
 					\label{fig:6.2.1}
 				\end{subfigure}
 				\begin{subfigure}{.3\textwidth}
@@ -507,9 +513,11 @@
 			% d
 			\item 
 			
-			Trying to recover salt and pepper noisy image with the mean filter does not yield a very good result: the output image is still noisy. The result is shown in \ref{fig:6.4.1}.
+			Trying to recover salt and pepper noisy image with the mean filter does not yield a very good result: the output image is still noisy. The result is shown in \ref{fig:6.4.1}. This is because salt and pepper noise is very extreme. The noisy pixel has signal of either 1 or 0 (white or black). This affects the mean vastly. 
 			
-			The chosen filter is the median filter. This is achieved with OpenCV's $medianBlur$ method. This works because salt and pepper noise is very extreme. The pixel has signal of either 1 or 0 (white or black). This affects the mean vastly, where as it does not really affect the median of the nearby pixels. By taking the mean of the near by pixels, we will likely get a better resemblance of the neighbor pixels. The result is shown in Figure \ref{fig:6.4.2}.
+			The chosen filter to remove the salt and pepper noise is the median filter. It is similar to the mean filter: it looks at each pixel's neighbors and take the median value instead of the mean value.
+			
+			 This is achieved with OpenCV's $medianBlur$ method. This works because salt and pepper noise's extreme noisy signals are less likely to affect the median of the nearby pixels. The only way that the median is affected is that more than half of the pixels within the neighbor frame are affected. Thus, by taking the median of the near by pixels, it is more likely that we will get a better resemblance of the neighbor pixels. The result of the median filter is shown in Figure \ref{fig:6.4.2}.
 			
 			\begin{figure}[!htb]
 				\begin{subfigure}{.3\textwidth}
@@ -538,13 +546,13 @@
 			% e
 			\newpage
 			\item 
-			The salt and pepper noisy image applied to the color image is shown in \ref{fig:6.5.1}. This is achieved by adding salt and pepper noise to each channel and then combining them.
+			The salt and pepper noisy image applied to the color image is shown in \ref{fig:6.5.1}. This is achieved by adding salt and pepper noise to each channel and then combining the noisy channels.
 			
 			When applying the median filter as in part d, most of the noise are gone. 
 			
-			As in part d, this is achieved with OpenCV's $medianBlur$ method. By taking the mean of the near by pixels, we will likely get a better resemblance of the neighbor pixels. The result is shown in Figure \ref{fig:6.5.2}.
+			As in part d, this is achieved with OpenCV's $medianBlur$ method. By taking the median of the near by pixels, we will likely get a better resemblance of the neighbor pixels. The result is shown in Figure \ref{fig:6.5.2}.
 			
-			We can see that the median filter image (Figure \ref{fig:6.5.2}) is slightly blurred when comparing to the original image (Figure \ref{fig:6.5.3}). This is because by taking the median, the pixel will be affected by its neighbor pixels.
+			I was not able to produce the effect shown in the assignment. However, we can see that the median filter image (Figure \ref{fig:6.5.2}) is slightly blurred when comparing to the original image (Figure \ref{fig:6.5.3}). This is because by taking the median, the pixel is be affected by its neighbor pixels.
 			
 			
 			\begin{figure}[!htb]

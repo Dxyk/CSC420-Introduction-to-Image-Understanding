@@ -152,6 +152,12 @@ def my_portrait_mode(img: np.ndarray,
 
 
 if __name__ == '__main__':
+    # setup: create output directories
+    from pathlib import Path
+
+    Path('out/question_4/gray/').mkdir(parents=True, exist_ok=True)
+    Path('out/question_4/color/').mkdir(parents=True, exist_ok=True)
+
     gray_img = load_image("./gray.jpg")
     color_img = load_image("./color.jpg")
     q4c_img = load_image("./4_c_orig.jpg")
