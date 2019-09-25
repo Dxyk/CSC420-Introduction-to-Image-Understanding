@@ -26,13 +26,13 @@ def is_separable_filter(h: np.ndarray) -> bool:
 
 if __name__ == '__main__':
     print("{0} Question 5 {0}".format("=" * 20))
+    print("{0} Separable {0}".format("=" * 10))
     separable_filter = np.asarray([[1, 2, 1],
                                    [2, 4, 2],
                                    [1, 2, 1]]) / 16
+    print(is_separable_filter(separable_filter))
+    print("{0} Inseparable {0}".format("=" * 10))
     inseparable_filter = np.asarray([[0, -1, 0],
                                      [-1, 5, -1],
                                      [0, -1, 0]])
-    print("{0} Separable {0}".format("=" * 10))
-    print(is_separable_filter(separable_filter))
-    print("{0} Inseparable {0}".format("=" * 10))
     print(is_separable_filter(inseparable_filter))

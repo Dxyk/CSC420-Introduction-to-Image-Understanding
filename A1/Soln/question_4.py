@@ -158,6 +158,7 @@ if __name__ == '__main__':
 
     print("{0} Question 4 {0}".format("=" * 20))
 
+    # part a
     print("{0} a {0}".format("=" * 10))
     h = np.asarray([[0, 0, 0],
                     [0, 2, 0],
@@ -172,6 +173,7 @@ if __name__ == '__main__':
         color_out = my_correlation(color_img, h, mode)
         save_image(color_out, "out/question_4/color/a_{}.jpg".format(mode))
 
+    # part b
     print("{0} b {0}".format("=" * 10))
     for mode in ["valid", "same", "full"]:
         print("{0} {1} {0}".format("=" * 5, mode))
@@ -182,6 +184,7 @@ if __name__ == '__main__':
         color_out = my_convolution(color_img, h, mode)
         save_image(color_out, "out/question_4/color/b_{}.jpg".format(mode))
 
+    # part c
     print("{0} c {0}".format("=" * 10))
     q4c_out = my_portrait_mode(q4c_img, (125, 125), (300, 270))
     save_image(q4c_out, "out/question_4/color/c_out.jpg")
