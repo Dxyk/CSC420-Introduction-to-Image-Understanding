@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 OUT_PATH = "./out/question_1/"
-REPORT_PATH = "./Report/images/question_1"
+REPORT_PATH = "./Report/images/question_1/"
 
 
 # ==================== Helper Methods Start ====================
@@ -26,9 +26,9 @@ def load_image(src_path: str, gray=False) -> np.ndarray:
     :param gray: true if return grayscale image, false otherwise
     :return: the converted np array for the image
     """
-    img = cv2.imread(src_path)
-    code = cv2.COLOR_BGR2GRAY if gray else cv2.COLOR_BGR2RGB
-    return cv2.cvtColor(img, code)
+    code = cv2.IMREAD_GRAYSCALE if gray else cv2.IMREAD_COLOR
+    img = cv2.imread(src_path, code)
+    return img
 
 
 def save_image(np_data: np.ndarray, target_path: str) -> None:
@@ -39,7 +39,9 @@ def save_image(np_data: np.ndarray, target_path: str) -> None:
     :param target_path: the target file path
     :return: None
     """
-    cv2.imwrite(target_path, np_data)
+    cv2.imwrite(OUT_PATH + target_path, np_data)
+    if REPORT:
+        cv2.imwrite(REPORT_PATH + target_path, np_data)
 
 
 def zero_pad(img: np.ndarray, height: int, width: int) -> np.ndarray:
@@ -155,11 +157,15 @@ def my_linear_interpolation(img: np.ndarray, d: int,
     """
     if dim not in (0, 1):
         raise ValueError("The target dimension must be either 0 or 1.")
-    if img.ndim < 2 or img.ndim > 3:
+    if img.ndim not in (2, 3):
         raise ValueError("image dimension must be 2 or 3")
+
+    if img.ndim == 2:
+        img = img[:, :, np.newaxis]
 
     # calculate the 1d reconstruction filter
     h = _get_1d_linear_interpolation_filter(d)
+
     # adjust the shape for the reconstruction filter
     h = h[np.newaxis]
     if dim == 0:
@@ -167,35 +173,34 @@ def my_linear_interpolation(img: np.ndarray, d: int,
 
     # initialize up-sampled image and fill in the initial values at
     # where i/d is an integer
-    shape = img.shape
-    if dim == 0:
-        shape = (d * shape[0], shape[1], *shape[2:])
-    else:
-        shape = (shape[0], d * shape[1], *shape[2:])
+    shape = list(img.shape)
+    shape[dim] = d * shape[dim]
+    shape = tuple(shape)
+
     new_img = np.zeros(shape)
-    for i in range(new_img.shape[dim]):
-        if i % d == 0:
-            if dim == 0:
-                new_img[i, :, :] = img[i // d, :, :]
-            else:
-                new_img[:, i, :] = img[:, i // d, :]
+
+    # fill new image according to dimension
+    if dim == 0:
+        new_img[::d, :, :] = img
+    else:
+        new_img[:, ::d, :] = img
 
     return my_convolution(new_img, h)
 
 
 def generalized_linear_interpolation(img: np.ndarray, d: int) -> np.ndarray:
     """
+    Apply 2D Linear Interpolation on an image to up-sample by factor of d.
 
-    :param img:
-    :param d:
-    :return:
+    :param img: the image
+    :param d: the factor for up-sampling
+    :return: the up-sampled image
     """
-    if img.ndim < 2 or img.ndim > 3:
+    if img.ndim not in (2, 3):
         raise ValueError("image dimension must be 2 or 3")
 
     # calculate the 1d reconstruction filter
     h_1d = _get_1d_linear_interpolation_filter(d)
-    # adjust the shape for the reconstruction filter
     h = np.outer(h_1d, h_1d)
 
     # initialize up-sampled image and fill in the initial values at
@@ -203,11 +208,7 @@ def generalized_linear_interpolation(img: np.ndarray, d: int) -> np.ndarray:
     shape = img.shape
     shape = (d * shape[0], d * shape[1], *shape[2:])
     new_img = np.zeros(shape)
-    for i in range(new_img.shape[0]):
-        if i % d == 0:
-            for j in range(new_img.shape[1]):
-                if j % d == 0:
-                    new_img[i, j, :] = img[i // d, j // d, :]
+    new_img[::d, ::d, :] = img
 
     return my_convolution(new_img, h)
 
@@ -216,15 +217,16 @@ def part1() -> None:
     # ========== part a ==========
     print("{0} a {0}".format("=" * 15))
     enlarged_image = my_linear_interpolation(bee_img, 4, 0)
+    save_image(enlarged_image, "1_1_1.jpg")
     enlarged_image = my_linear_interpolation(enlarged_image, 4, 1)
-    save_image(enlarged_image, "./out/question_1/1_1.jpg")
+    save_image(enlarged_image, "1_1_2.jpg")
 
 
 def part2() -> None:
     # ========== part b ==========
     print("{0} b {0}".format("=" * 15))
     enlarged_image = generalized_linear_interpolation(bee_img, 4)
-    save_image(enlarged_image, "./out/question_1/1_2.jpg")
+    save_image(enlarged_image, "1_2.jpg")
 
 
 def main() -> None:
@@ -234,6 +236,7 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    REPORT = True
     directory_setup()
     bee_img = load_image("./resource/bee.jpg")
 
