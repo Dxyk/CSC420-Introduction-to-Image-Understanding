@@ -224,13 +224,13 @@
                     \includegraphics[width=\linewidth]{images/question_1/1_1_2.jpg}
                     \centering
                     \caption{1D Filter}
-                    \label{fig:1.1.2}
+                    \label{fig:1.2.2}
                 \end{subfigure}
                 \begin{subfigure}{.3\textwidth}
                     \includegraphics[width=\linewidth]{images/orig/bee.jpg}
                     \centering
                     \caption{Original Image}
-                    \label{fig:1.2.2}
+                    \label{fig:1.2.3}
                 \end{subfigure}
                 \centering
                 \caption{}
@@ -249,23 +249,98 @@
     %=========================================================
     \begin{homeworkProblem}
     	
+        See \textit{question\_2.py} for implementations.
+        
     	\begin{enumerate}
-    		
-    		\item 
-    		
-    		The computational cost for $h * I$ when $h$ is not separable is $O(n^{2}m^{2})$.
-    		
-    		This is because each pixel in $I$ gets computed for $m^2$ times, and there are $n^2$ pixels in total.
-    		
-    		\item 
-    		
-    		The computational cost for $h * I$ when $h$ is separable is $O(m^{2}2n)$.
-    		
-    		This is because each pixel in $I$ gets computed for $2m$ times (only vertical and horizontal edge detecting vectors), and there are $n^2$ pixels in total
-    		
+    		\item
+            The outputs of the corner detection functions are listed in Figure \ref{fig:2.1}.
+            
+            After tuning with different alpha values, $\alpha = 0.06$ was picked because it produced the least amount of noise.
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=\linewidth]{images/question_2/2_1_Harris.jpg}
+                \centering
+                \caption{Harris corner detection}
+                \label{fig:2.1.1}
+            \end{figure}
+            \begin{figure}[!htb]
+                \includegraphics[width=\linewidth]{images/question_2/2_1_Brown.jpg}
+                \centering
+                \caption{Brown corner detection}
+                \label{fig:2.1.2}
+            \end{figure}
+            
+            The only way for us to calculate the R scores without using determinant or trace is to calculate the eigenvalues for each window's error term. However, this is extremely computationally heavy and does yield a better result than computing the trace and determinant.
+            
+            \item
+            
+            First we rotate the original image to produce Figure \ref{fig:2.2.1}
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_2/2_2_rotated_img.jpg}
+                    \centering
+                    \caption{Rotated image}
+                    \label{fig:2.2.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_2/2_2_orig_img.jpg}
+                    \centering
+                    \caption{Original Image}
+                    \label{fig:2.2.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:2.2}
+            \end{figure}
+        
+            By applying Harris corner detection to the rotated image, we get Figure \ref{fig:2.2.3}. We can see that the detected corners are also rotated.
+        
+            \begin{figure}[!htb]
+                \includegraphics[width=\linewidth]{images/question_2/2_2_rotated_R.jpg}
+                \centering
+                \caption{Rotated Haris corner detection}
+                \label{fig:2.2.3}
+            \end{figure}
+            
+            \newpage
+        
+            By rotating the detected corners, we get the following Figure \ref{fig:2.2.4}.
+            
+            To prove that the detected points are also rotated by the same angle, we count the number of detected corners in the rotated image ($num\_total\_rotated$). Then we also count the number of corners in the original image corresponding to the corners in the rotated image ($num\_match$). Then we take the fraction of those two $\dfrac{num\_match}{num\_total\_rotated}$. The result was $99\%$ which is sufficient to prove that the detected corners are the same.
+            
+            Note that we didn't count the total number of detected corner in the original image ($num\_total\_original$) and compare it with the number of corners detected in the rotated image because rotating the image will caused some information loss, and this measurement won't be accurate.
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=\linewidth]{images/question_2/2_2_rerotated_R.jpg}
+                \centering
+                \caption{Un-rotate detected corners}
+                \label{fig:2.2.4}
+            \end{figure}
+        
     	\end{enumerate}
+    
+        
+        
     	
     \end{homeworkProblem}
+
+
+\clearpage
+%=========================================================
+%---------------------------------------------------------------------------------
+%	PROBLEM 3: 
+%---------------------------------------------------------------------------------
+%=========================================================
+\begin{homeworkProblem}
+    
+    \begin{enumerate}
+        \item
+    \end{enumerate}
+    
+\end{homeworkProblem}
+
+
 	
 	
 	%=========================================================
