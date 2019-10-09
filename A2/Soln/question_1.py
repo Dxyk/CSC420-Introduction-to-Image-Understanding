@@ -1,5 +1,8 @@
+import cv2
 import numpy as np
-from PIL import Image
+
+OUT_PATH = "./out/question_1/"
+REPORT_PATH = "./Report/images/question_1"
 
 
 # ==================== Helper Methods Start ====================
@@ -11,18 +14,21 @@ def directory_setup() -> None:
     """
     from pathlib import Path
 
-    Path('./out/question_1/').mkdir(parents=True, exist_ok=True)
+    Path(OUT_PATH).mkdir(parents=True, exist_ok=True)
+    Path(REPORT_PATH).mkdir(parents=True, exist_ok=True)
 
 
-def load_image(src_path: str) -> np.ndarray:
+def load_image(src_path: str, gray=False) -> np.ndarray:
     """
     Loads an image from the src path into a np array.
 
     :param src_path: the path for the source image
+    :param gray: true if return grayscale image, false otherwise
     :return: the converted np array for the image
     """
-    img = Image.open(src_path)
-    return np.asarray(img, dtype="float32")
+    img = cv2.imread(src_path)
+    code = cv2.COLOR_BGR2GRAY if gray else cv2.COLOR_BGR2RGB
+    return cv2.cvtColor(img, code)
 
 
 def save_image(np_data: np.ndarray, target_path: str) -> None:
@@ -33,14 +39,7 @@ def save_image(np_data: np.ndarray, target_path: str) -> None:
     :param target_path: the target file path
     :return: None
     """
-    if np_data.ndim == 2:
-        img = Image.fromarray(
-            np.asarray(np.clip(np_data, 0, 255), dtype="uint8"), "L")
-    elif np_data.ndim == 3:
-        img = Image.fromarray(np_data.astype(np.uint8))
-    else:
-        raise Exception("np_data must be either 2 or 3 dimensional")
-    img.save(target_path)
+    cv2.imwrite(target_path, np_data)
 
 
 def zero_pad(img: np.ndarray, height: int, width: int) -> np.ndarray:
@@ -124,19 +123,21 @@ def my_convolution(img: np.ndarray, h: np.ndarray) -> np.ndarray:
 # ==================== Helper Methods End ====================
 
 
-def _get_1d_filter(d: int) -> np.ndarray:
+def _get_1d_linear_interpolation_filter(d: int) -> np.ndarray:
     """
-    Gets the 1D reconstruction filter
+    Gets the 1D reconstruction filter.
 
-    :param d: the scale of the up-sampling
+    The filter should be [1/d, 2/d, ..., (d-1)/d, 1, (d-1)/d, ..., 2/d, 1/d]
+
+    :param d: the image will be up-sampled by factor of d
     :return: the 1D reconstruction filter corresponding to the scale
     """
-    h = np.zeros(2 * d + 1)
+    h = np.zeros(2 * (d - 1) + 1)
     for i in range(len(h)):
-        if i < d:
-            h[i] = i / d
+        if i < d - 1:
+            h[i] = (i + 1) / d
         else:
-            h[i] = (d - (i - d)) / d
+            h[i] = (2 * d - i - 1) / d
     return h
 
 
@@ -158,7 +159,7 @@ def my_linear_interpolation(img: np.ndarray, d: int,
         raise ValueError("image dimension must be 2 or 3")
 
     # calculate the 1d reconstruction filter
-    h = _get_1d_filter(d)
+    h = _get_1d_linear_interpolation_filter(d)
     # adjust the shape for the reconstruction filter
     h = h[np.newaxis]
     if dim == 0:
@@ -193,7 +194,7 @@ def generalized_linear_interpolation(img: np.ndarray, d: int) -> np.ndarray:
         raise ValueError("image dimension must be 2 or 3")
 
     # calculate the 1d reconstruction filter
-    h_1d = _get_1d_filter(d)
+    h_1d = _get_1d_linear_interpolation_filter(d)
     # adjust the shape for the reconstruction filter
     h = np.outer(h_1d, h_1d)
 
@@ -211,15 +212,25 @@ def generalized_linear_interpolation(img: np.ndarray, d: int) -> np.ndarray:
     return my_convolution(new_img, h)
 
 
-def main() -> None:
+def part1() -> None:
+    # ========== part a ==========
     print("{0} a {0}".format("=" * 15))
     enlarged_image = my_linear_interpolation(bee_img, 4, 0)
     enlarged_image = my_linear_interpolation(enlarged_image, 4, 1)
     save_image(enlarged_image, "./out/question_1/1_1.jpg")
 
+
+def part2() -> None:
+    # ========== part b ==========
     print("{0} b {0}".format("=" * 15))
     enlarged_image = generalized_linear_interpolation(bee_img, 4)
     save_image(enlarged_image, "./out/question_1/1_2.jpg")
+
+
+def main() -> None:
+    part1()
+
+    part2()
 
 
 if __name__ == '__main__':
