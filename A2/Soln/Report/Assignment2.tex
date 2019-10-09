@@ -318,6 +318,80 @@
                 \label{fig:2.2.4}
             \end{figure}
         
+            \newpage
+            \item 
+            The generated results are shown in Figure \ref{fig:2.3.1}.
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=\linewidth]{images/question_2/2_2_rerotated_R.jpg}
+                \centering
+                \caption{Interest points}
+                \label{fig:2.3.1}
+            \end{figure}
+        
+            By circling out the interest points on the original image, we get Figure \ref{fig:2.3.2}.
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=\linewidth]{images/question_2/2_2_rerotated_R.jpg}
+                \centering
+                \caption{Image with interest points}
+                \label{fig:2.321}
+            \end{figure}
+        
+        
+            \newpage
+            \item 
+            The selected descriptor is SURF (Speed Up Robust Feature).
+            
+            \textbf{Key point Detection}
+            
+            In SURF, key points are detected using Box Filters that approximates LoGs.
+            These Box Filters are easier to calculate using the Integral images. Integral images are sum of all the intensities of the image $ I_{\Sigma} (X) = \sum_{i = 0}^{i \leq x} \sum_{j = 0}^{j \leq y} I(i, j) $.
+            
+            The blob detector used in SURF is Hessian matrix
+            
+            \begin{equation}
+            H (p, \sigma) = 
+            \begin{bmatrix}
+                L_{xx} (p, \sigma) & L_{xy} (p, \sigma)\\
+                L_{yx} (p, \sigma) & L_{yy} (p, \sigma)
+            \end{bmatrix}
+            \end{equation}
+            
+            where $ L_{xx}(p,\sigma )$ etc. is the convolution of the second-order derivative of gaussian with the image $I(x,y)$ at the point $p$.
+            
+            The determinant of the Hessian matrix is used as a measure of local change around the point and points are chosen where this determinant is maximal
+            
+            
+            \textbf{Key point Descriptor}
+            
+            In order to invariant to image rotation, we identify a reproducible orientation for the interest points. Because of that, first calculate
+            the Haar wavelet responses in x and y direction within a circular neighbourhood of radius 6s around the interest point, with scale
+            s (sampling step is depend on s) at which the interest point was detected. The size of wavelet which is scale depended and its side
+            length is 4s. 
+            
+            Once the wavelet responses are calculated and weighted with a Gaussian σ=2s centered at the interest point. The responses
+            are represented as points in a space with the horizontal response strength along the abscissa and the vertical response strength along
+            the ordinate. Find maximum the sum of all responses which is wavelet response in every sliding window (π/3 window orientation)
+            (see figure 4). The horizontal and vertical responses within the window are summed. From these two horizontal and vertical,
+            summed responses then yield a local orientation vector. The orientation of the interest point can be defined by finding the longest
+            such vector over all windows.
+            
+            To extract the descriptor, square region which size is 20s are constructed on interested points. Examples of such square
+            regions are illustrated in figure 5
+            
+            The wavelet responses dx and dy are summed up over each sub-region and form a first set of entries in the feature vector.
+            In order to bring in information about the polarity of the intensity changes, extract the sum of the absolute values of the responses,
+            |dx| and |dy|, each sub-region has a four-dimensional descriptor vector V for its underlying intensity structure V =
+            (∑ dx
+            , ∑ dy
+            , ∑ |dx
+            | , ∑ |dx
+            |). Concatenating this for all, 4 x 4 sub-regions, and this results in a descriptor vector of length is 64.
+            The wavelet responses are invariant to a bias in illumination (offset) and Invariance to contrast (a scale factor) is achieved by
+            turning the descriptor into a unit vector.
+            
+        
     	\end{enumerate}
     
         
@@ -326,20 +400,77 @@
     \end{homeworkProblem}
 
 
-\clearpage
-%=========================================================
-%---------------------------------------------------------------------------------
-%	PROBLEM 3: 
-%---------------------------------------------------------------------------------
-%=========================================================
-\begin{homeworkProblem}
-    
-    \begin{enumerate}
-        \item
-    \end{enumerate}
-    
-\end{homeworkProblem}
+    \clearpage
+    %=========================================================
+    %---------------------------------------------------------------------------------
+    %	PROBLEM 3: 
+    %---------------------------------------------------------------------------------
+    %=========================================================
+    \begin{homeworkProblem}
+        
+        \begin{enumerate}
+            \item
+            Gaussian:
+            \begin{align*}
+            G(x, y, \sigma) = \frac{1}{\sqrt{2\pi \sigma^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma^2}}
+            \end{align*}
+            
+            Gaussian First derivative w.r.t x:
+            \begin{align*}
+            \frac{\partial G(x, y, \sigma)}{\partial x} &= -\frac{1}{\sqrt{2\pi \sigma}} \frac{x}{\sigma^2} e^{-\frac{x^2 + y^2}{2 \sigma^2}}
+            \end{align*}
+            
+            Gaussian Second derivative w.r.t x:
+            \begin{align*}
+            \frac{\partial^2 G(x, y, \sigma)}{\partial x^2} &= -\frac{1}{2\pi \sigma^2} (\frac{x^2}{\sigma^4} e^{-\frac{x^2 + y^2}{2 \sigma^2}} - \frac{1}{\sigma^2} e^{-\frac{x^2 + y^2}{2 \sigma^2}}) \\
+            &= \frac{1}{2\pi \sigma^2} \frac{x^2 - \sigma^2}{\sigma^4} e^{-\frac{x^2 + y^2}{2 \sigma^2}}
+            \end{align*}
+            
+            Similarly, we can derive the Gaussian Second derivative w.r.t y:
+            \begin{align*}
+            \frac{\partial^2 G(x, y, \sigma)}{\partial y^2} &= \frac{1}{2\pi \sigma^2} \frac{y^2 - \sigma^2}{\sigma^4} e^{-\frac{x^2 + y^2}{2 \sigma^2}}
+            \end{align*}
+            
+            Laplacian of Gaussian:
+            \begin{align*}
+            \triangledown^2 G(x, y, \sigma) &= \frac{\partial^2 G(x, y, \sigma)}{\partial x^2} + \frac{\partial^2 G(x, y, \sigma)}{\partial y^2}\\
+            &= \frac{1}{2\pi \sigma^2} \frac{1}{\sigma^4} e^{-\frac{x^2 + y^2}{2 \sigma^2}} (x^2 + y^2 - 2\sigma^2)\\
+            &=-\frac{x^2 + y^2 - 2\sigma^2}{2 \pi \sigma^6} e^{-\frac{x^2 + y^2}{2 \sigma^2}} \\
+            &= -\frac{1}{\pi \sigma^4} (1 - \frac{x^2 + y^2}{\sigma^2}) e^{-\frac{x^2 + y^2}{2 \sigma^2}} 
+            \end{align*}
+            
+            The Laplacian of Gaussian is NOT separable because it can not be separated into the product of two vectors.
+            
+           
+        \item 
+            Difference of Gaussian
+            
+            \begin{align*}
+            G(x, y, \sigma_1) - G(x, y, \sigma_2) &= \frac{1}{\sqrt{2\pi \sigma_1^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma_1^2}} - \frac{1}{\sqrt{2\pi \sigma_2^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma_2^2}}
+            \end{align*}
+            
+            % TODO
+            
+            
+        \end{enumerate}
+        
+    \end{homeworkProblem}
 
+
+        \clearpage
+    %=========================================================
+    %---------------------------------------------------------------------------------
+    %	PROBLEM 4: 
+    %---------------------------------------------------------------------------------
+    %=========================================================
+    \begin{homeworkProblem}
+        
+        \begin{enumerate}
+            \item
+            
+        \end{enumerate}
+        
+        \end{homeworkProblem}
 
 	
 	

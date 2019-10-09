@@ -1,4 +1,5 @@
-from typing import Tuple
+import pickle
+from typing import Tuple, List, Any
 
 import cv2
 import numpy as np
@@ -6,6 +7,7 @@ import numpy as np
 OUT_PATH = "./out/question_2/"
 TUNING_PATH = OUT_PATH + "tuning/"
 REPORT_PATH = "./Report/images/question_2/"
+PICKLE_PATH = OUT_PATH + "pickle/"
 
 
 # ==================== Helper Methods Start ====================
@@ -20,6 +22,7 @@ def directory_setup() -> None:
     Path(OUT_PATH).mkdir(parents=True, exist_ok=True)
     Path(TUNING_PATH).mkdir(parents=True, exist_ok=True)
     Path(REPORT_PATH).mkdir(parents=True, exist_ok=True)
+    Path(PICKLE_PATH).mkdir(parents=True, exist_ok=True)
 
 
 def load_image(src_path: str, gray=False) -> np.ndarray:
@@ -46,6 +49,28 @@ def save_image(np_data: np.ndarray, target_path: str) -> None:
     cv2.imwrite(OUT_PATH + target_path, np_data)
     if REPORT:
         cv2.imwrite(REPORT_PATH + target_path, np_data)
+
+
+def save_data(data: Any, target_path: str) -> None:
+    """
+    Saves serialized data to target path
+    :param data: the data to save
+    :param target_path: the target path
+    :return: None
+    """
+    with open(PICKLE_PATH + target_path, 'wb') as f:
+        pickle.dump(data, f)
+
+
+def load_data(src_path: str) -> Any:
+    """
+    Loads the serialized data from the src path
+
+    :param src_path: the path to the stored serialized data
+    :return: the loaded data
+    """
+    with open(PICKLE_PATH + src_path, 'rb') as f:
+        return pickle.load(f)
 
 
 # ==================== Helper Methods End ====================
@@ -92,7 +117,7 @@ def _non_maximum_suppression(m: np.ndarray, neighbour_size: int) -> np.ndarray:
                                   y_min_idx: y_max_idx]):
                 m_cpy[x, y] = 0
 
-    return m
+    return m_cpy
 
 
 def corner_detection_harris(img: np.ndarray, alpha: float = 0.06,
@@ -181,11 +206,22 @@ def rotate_img(img: np.ndarray, angle: float) -> np.ndarray:
 
 # ========== part c ==========
 def find_interest_points(img: np.ndarray,
-                         threshold: float = 4000) -> np.ndarray:
+                         threshold: float = 100000) -> \
+        List[Tuple[int, int, float]]:
+    """
+    Gets the interest points given the image using laplacian of gaussian at
+    different scales.
+
+    :param img: the target image
+    :param threshold: the threshold for checking if the laplacian is the extrema
+    :return: a list of interest points and their coordinates
+    """
     interest_points = []
-    scale_map = []
-    sigma_list = [0.5, 0.7, 1.0, 1.2, 1.5, 1.7, 2.0, 2.3, 2.5, 2.9, 3.0, 3.1,
-                  3.5, 4.0, 4.5, 4.8, 5.0, 5.3, 5.8, 6.4]
+    scale_map: List[np.ndarray] = []
+    sigma_list = np.arange(0.5, 5.5, 0.5)
+
+    print("Using {0} sigmas: {1}".format(len(sigma_list), sigma_list.tolist()))
+
     for sigma in sigma_list:
         Ix = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
         Ix2 = cv2.Sobel(Ix, cv2.CV_64F, 1, 0, ksize=5)
@@ -196,50 +232,51 @@ def find_interest_points(img: np.ndarray,
         laplacian = np.sqrt(np.square(blur_Ix2) + np.square(blur_Iy2))
         scale_map.append(laplacian)
 
-    def neighbour_mode(scale_map, l, x, y, mode):
-        neighbour = []
-        if mode == "plus":
-            neighbour.append(scale_map[l].item(x, y))
-        if x < scale_map[0].shape[0] - 1:
-            neighbour.append(scale_map[l].item(x + 1, y))
-        if y < scale_map[0].shape[1] - 1:
-            neighbour.append(scale_map[l].item(x, y + 1))
-        if x < scale_map[0].shape[0] - 1 and y < scale_map[0].shape[1] - 1:
-            neighbour.append(scale_map[l].item(x + 1, y + 1))
-        if x >= 1 and y < scale_map[0].shape[1] - 1:
-            neighbour.append(scale_map[l].item(x - 1, y))
-            neighbour.append(scale_map[l].item(x - 1, y + 1))
-        if y >= 1 and x < scale_map[0].shape[0] - 1:
-            neighbour.append(scale_map[l].item(x, y - 1))
-            neighbour.append(scale_map[l].item(x + 1, y - 1))
-        if x >= 1 and y >= 1:
-            neighbour.append(scale_map[l].item(x - 1, y - 1))
-        return neighbour
+    def get_neighbours(scale, x_coord, y_coord):
+        neighbours = []
 
-    def find_neighbour(scale_map, l, x, y):
-        neighbour = neighbour_mode(scale_map, l, x, y, "no")
-        if l >= 1:
-            neighbour.extend(neighbour_mode(scale_map, l - 1, x, y, "plus"))
-        if l < len(sigma_list) - 1:
-            neighbour.extend(neighbour_mode(scale_map, l + 1, x, y, "plus"))
-        return neighbour
+        min_scale = max(0, scale - 1)
+        max_scale = min(len(scale_map) - 1, scale + 1)
+        min_x = max(0, x_coord - 1)
+        max_x = min(h - 1, x_coord + 1)
+        min_y = max(0, y_coord - 1)
+        max_y = min(w - 1, y_coord + 1)
+        for s in range(min_scale, max_scale + 1):
+            for cur_x in range(min_x, max_x + 1):
+                for cur_y in range(min_y, max_y + 1):
+                    if s != scale or cur_x != x_coord or cur_y != y_coord:
+                        neighbours.append(scale_map[s][cur_x, cur_y])
+        return neighbours
 
-    for i in range(len(sigma_list) - 1):
-        for x in range(img.shape[0]):
-            for y in range(img.shape[1]):
+    h, w = img.shape[0], img.shape[1]
+    for i in range(len(sigma_list)):
+        print("Processing {0} / {1} of the sigmas".format(i, len(sigma_list)))
+        for x in range(h):
+            for y in range(w):
                 pixel = scale_map[i][x, y]
                 if pixel > threshold:
-                    neighbour = find_neighbour(scale_map, i, x, y)
-                    Min, Max = True, True
-                    for n in neighbour:
-                        if n >= pixel:
-                            Max = False
-                        if n <= pixel:
-                            Min = False
-                    if Max or Min:
-                        interest_points.append([x, y, sigma_list[i]])
-    print(interest_points)
+                    neighbours2 = get_neighbours(i, x, y)
+                    if pixel > max(neighbours2) or pixel < min(neighbours2):
+                        interest_points.append((x, y, sigma_list[i]))
+    print("Found {0} interest points".format(len(interest_points)))
     return interest_points
+
+
+def c_tuning() -> None:
+    thresholds = [50000, 100000, 150000]
+    for threshold in thresholds:
+        print("Threshold: {}".format(threshold))
+        img_cpy = np.copy(img_gray)
+        interest_points = find_interest_points(img_cpy, threshold=threshold)
+        save_data(interest_points, "tuning_2_3_{}.pkl".format(threshold))
+        interest_points = load_data("tuning_2_3_{}.pkl".format(threshold))
+        print(len(interest_points))
+        tmp = np.zeros(img_cpy.shape)
+        for x, y, sigma in interest_points:
+            tmp[x, y] = 255
+            cv2.circle(img_cpy, (y, x), int(sigma * 3), (0, 0, 0), thickness=1)
+        save_image(tmp, "tuning_points_2_3_{}.jpg".format(threshold))
+        save_image(img_cpy, "tuning_2_3_{}.jpg".format(threshold))
 
 
 # ========== mains ==========
@@ -305,20 +342,27 @@ def part_b() -> None:
 
 
 def part_c() -> None:
+    # c_tuning()
     img_cpy = np.copy(img_gray)
+    print(img_cpy.size)
     interest_points = find_interest_points(img_cpy)
-    for points in interest_points:
-        cv2.circle(img_cpy, (points[1], points[0]), int(points[2]), (0, 0, 0),
-                   1)
-    save_image(img_cpy, "3_1.jpg")
+    save_data(interest_points, "2_3_interest_points.pkl")
+    interest_points = load_data("2_3_interest_points.pkl")
+    print(len(interest_points))
+    tmp = np.zeros(img_cpy.shape)
+    for x, y, sigma in interest_points:
+        tmp[x, y] = 255
+        cv2.circle(img_cpy, (y, x), int(sigma * 3), (0, 0, 0), thickness=1)
+    save_image(tmp, "2_3_interest_points.jpg")
+    save_image(img_cpy, "2_3_result.jpg")
 
 
 def main() -> None:
     # part_a()
 
-    part_b()
+    # part_b()
 
-    # part_c()
+    part_c()
 
 
 if __name__ == '__main__':
