@@ -81,6 +81,7 @@ def _non_maximum_suppression(m: np.ndarray, neighbour_size: int) -> np.ndarray:
     :param neighbour_size: the size of the neighbourhood in order to compare
     :return: the matrix after NMS
     """
+    m_cpy = np.copy(m)
     for x in range(m.shape[0]):
         for y in range(m.shape[1]):
             x_min_idx = max(x - neighbour_size, 0)
@@ -89,7 +90,8 @@ def _non_maximum_suppression(m: np.ndarray, neighbour_size: int) -> np.ndarray:
             y_max_idx = min(y + neighbour_size, m.shape[1])
             if m[x, y] != np.amax(m[x_min_idx: x_max_idx,
                                   y_min_idx: y_max_idx]):
-                m[x, y] = 0
+                m_cpy[x, y] = 0
+
     return m
 
 
@@ -144,7 +146,7 @@ def tune_params_a() -> None:
     # image contains less noise
     alphas = [0.04, 0.045, 0.05, 0.055, 0.06]
     for alpha in alphas:
-        R = corner_detection_harris(img, alpha)
+        R = corner_detection_harris(img_gray, alpha)
         save_image(R, "tuning_Harris_{}.jpg".format(alpha))
 
     thresholds = [1000, 10000, 50000, 100000, 2e5, 1e6, 1e8, 1e10]
@@ -152,12 +154,12 @@ def tune_params_a() -> None:
         # tune for R threshold
         # by comparing the results, the best threshold is 1e10 because this
         # yields an appropriate amount of corners
-        R = corner_detection_harris(img, threshold=threshold)
+        R = corner_detection_harris(img_gray, threshold=threshold)
         save_image(R, "tuning_Harris_{}.jpg".format(threshold))
 
         # tune for B threshold
         # by comparing the results, the best threshold is 2e5
-        B = corner_detection_brown(img, threshold=threshold)
+        B = corner_detection_brown(img_gray, threshold=threshold)
         save_image(B, "tuning_Brown_{}.jpg".format(threshold))
 
 
@@ -178,7 +180,8 @@ def rotate_img(img: np.ndarray, angle: float) -> np.ndarray:
 
 
 # ========== part c ==========
-def find_interest_points(img: np.ndarray, threshold: float = 4000) -> np.ndarray:
+def find_interest_points(img: np.ndarray,
+                         threshold: float = 4000) -> np.ndarray:
     interest_points = []
     scale_map = []
     sigma_list = [0.5, 0.7, 1.0, 1.2, 1.5, 1.7, 2.0, 2.3, 2.5, 2.9, 3.0, 3.1,
@@ -245,55 +248,85 @@ def part_a() -> None:
     # tune parameters
     # tune_params_a()
 
-    R = corner_detection_harris(img)
+    img_gray_cpy = np.copy(img_gray)
+    R_cpy = np.copy(img_gray)
+    B_cpy = np.copy(img_gray)
+
+    R = corner_detection_harris(img_gray_cpy)
+    for coord in np.transpose(np.nonzero(R)):
+        x, y = coord[1], coord[0]
+        cv2.circle(R_cpy, (x, y), 3, 0, 2)
     save_image(R, "2_1_Harris.jpg")
-    B = corner_detection_brown(img)
+    save_image(R_cpy, "2_1_Harris_plotted.jpg")
+    B = corner_detection_brown(img_gray)
+    for coord in np.transpose(np.nonzero(B)):
+        x, y = coord[1], coord[0]
+        cv2.circle(B_cpy, (x, y), 3, 0, 2)
     save_image(B, "2_1_Brown.jpg")
+    save_image(R_cpy, "2_1_Brown_plotted.jpg")
 
 
 def part_b() -> None:
     print("{0} b {0}".format("=" * 15))
-    save_image(img, "2_2_orig_img.jpg")
-    R = corner_detection_harris(img)
+    img_gray_cpy = np.copy(img_gray)
+    save_image(img_gray_cpy, "2_2_orig_img.jpg")
+
+    R = corner_detection_harris(img_gray_cpy)
     save_image(R, "2_2_orig_R.jpg")
 
-    rotated_img = rotate_img(img, 60)
+    rotated_img = rotate_img(img_gray, 60)
     save_image(rotated_img, "2_2_rotated_img.jpg")
-    rotated_R = corner_detection_harris(rotated_img)
+    rotated_R = corner_detection_harris(np.copy(rotated_img))
     save_image(rotated_R, "2_2_rotated_R.jpg")
 
-    rerotated_r = rotate_img(rotated_R, -60)
-    save_image(rerotated_r, "2_2_rerotated_R.jpg")
+    rerotated_R = rotate_img(rotated_R, -60)
+    save_image(rerotated_R, "2_2_rerotated_R.jpg")
 
     num_hi = 0
     num_match = 0
-    for i in range(rerotated_r.shape[0]):
-        for j in range(rerotated_r.shape[1]):
-            if rerotated_r[i, j] != 0:
+    for i in range(rerotated_R.shape[0]):
+        for j in range(rerotated_R.shape[1]):
+            if rerotated_R[i, j] != 0:
                 num_hi += 1
-                if np.count_nonzero(img[i, j]) != 0:
+                if np.count_nonzero(img_gray[i, j]) != 0:
                     num_match += 1
     print("# total: {}; # match: {}".format(num_hi, num_match))
     print("match percentage: {}%".format(num_match / num_hi * 100))
 
+    for coord in np.transpose(np.nonzero(rotated_R)):
+        x, y = coord[1], coord[0]
+        cv2.circle(rotated_img, (x, y), 3, 0, 2)
+    save_image(rotated_img, "2_2_rotated_plotted.jpg")
+
+    for coord in np.transpose(np.nonzero(rerotated_R)):
+        x, y = coord[1], coord[0]
+        cv2.circle(img_gray_cpy, (x, y), 3, 0, 2)
+    save_image(img_gray_cpy, "2_2_rerotated_plotted.jpg")
+
 
 def part_c() -> None:
-    print(find_interest_points(img))
+    img_cpy = np.copy(img_gray)
+    interest_points = find_interest_points(img_cpy)
+    for points in interest_points:
+        cv2.circle(img_cpy, (points[1], points[0]), int(points[2]), (0, 0, 0),
+                   1)
+    save_image(img_cpy, "3_1.jpg")
 
 
 def main() -> None:
     # part_a()
 
-    # part_b()
+    part_b()
 
-    part_c()
+    # part_c()
 
 
 if __name__ == '__main__':
     REPORT = False
 
     directory_setup()
-    img = load_image("./resource/building.jpg", gray=True)
+    img_rgb = load_image("./resource/building.jpg", gray=False)
+    img_gray = load_image("./resource/building.jpg", gray=True)
 
     print("{0} Question 2 {0}".format("=" * 20))
     main()
