@@ -342,13 +342,12 @@ def part_b() -> None:
 
 
 def part_c() -> None:
+    print("{0} c {0}".format("=" * 15))
     # c_tuning()
     img_cpy = np.copy(img_gray)
-    print(img_cpy.size)
     interest_points = find_interest_points(img_cpy)
     save_data(interest_points, "2_3_interest_points.pkl")
     interest_points = load_data("2_3_interest_points.pkl")
-    print(len(interest_points))
     tmp = np.zeros(img_cpy.shape)
     for x, y, sigma in interest_points:
         tmp[x, y] = 255

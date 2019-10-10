@@ -465,9 +465,142 @@
     %=========================================================
     \begin{homeworkProblem}
         
+        See \textit{question\_4.py} for implementations. \textbf{The SIFT algorithm being used is implemented in OpenCV}
+                
         \begin{enumerate}
             \item
             
+            The extracted SIFT feature points for sample1 and sample2 are shown in Figure \ref{fig:4.1}.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_1_sample1_img.jpg}
+                    \centering
+                    \caption{Sample1}
+                    \label{fig:4.1.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_1_sample2_img.jpg}
+                    \centering
+                    \caption{Sample2}
+                    \label{fig:4.1.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.1}
+            \end{figure}
+            
+            \item 
+            
+            The top 10 feature points calculated using L2 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.2}.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_2_marked_sample_1_L2.jpg}
+                    \centering
+                    \caption{Sample1 feature points}
+                    \label{fig:4.2.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_2_marked_sample_2_L2.jpg}
+                    \centering
+                    \caption{Sample2 feature points}
+                    \label{fig:4.2.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.2}
+            \end{figure}
+        
+            \newpage
+            The connected image is shown bellow
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_connected.png}
+                \centering
+                \caption{}
+                \label{fig:4.2.3}
+            \end{figure}
+        
+
+            By testing with different threshold values, the following graph was produced. This is reasonable because as we loosen our restrictions, more and more points will be matched between the two images.
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_match_vs_threshold_L2.png}
+                \centering
+                \caption{}
+                \label{fig:4.2.4}
+            \end{figure}
+            
+            \newpage
+            \item 
+            
+            The top 10 feature points calculated using L1 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.3.1}.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_1_L1.jpg}
+                    \centering
+                    \caption{Sample1 feature points}
+                    \label{fig:4.3.1.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_2_L1.jpg}
+                    \centering
+                    \caption{Sample2 feature points}
+                    \label{fig:4.3.1.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.3.1}
+            \end{figure}
+        
+            The top 10 feature points calculated using L3 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.3.2}.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_1_L3.jpg}
+                    \centering
+                    \caption{Sample1 feature points}
+                    \label{fig:4.3.2.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_2_L3.jpg}
+                    \centering
+                    \caption{Sample2 feature points}
+                    \label{fig:4.3.2.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.3.2}
+            \end{figure}
+            
+            \newpage
+            \item 
+            
+            The top 10 feature points of the noisy image calculated using L2 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.3.1}.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_1_L3.jpg}
+                    \centering
+                    \caption{Sample1 feature points}
+                    \label{fig:4.4.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_2_L3.jpg}
+                    \centering
+                    \caption{Sample2 feature points}
+                    \label{fig:4.4.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.4}
+            \end{figure}
+            
+            \item 
+            The idea is to find the dominant color channel of reference img and test img, then perform SIFT between these 2 dominant color channel. In this way we take the color of img into account cause we only perform computation with dominant color channel.
+            Drawing the line with green color.
         \end{enumerate}
         
         \end{homeworkProblem}
