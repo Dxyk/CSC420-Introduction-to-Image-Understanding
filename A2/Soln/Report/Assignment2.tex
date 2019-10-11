@@ -193,7 +193,50 @@
             \newpage
             \item
             
-            The generalized two dimensional linear interpolation reconstruction filter is 
+            In the 2d case, the original signal (image) will be a 2D matrix:
+            $
+            \begin{bmatrix}
+            F(0, 0) & F(0, 1) & \dots\\
+            F(1, 0) & F(1, 1) & \dots\\
+            \vdots & \vdots & \vdots
+            \end{bmatrix}
+            $
+            
+            Initializing $G'$:
+            $
+            \begin{bmatrix}
+            F(0, 0) & 0 & 0 & 0 & F(0, 1) & \dots\\
+            0 & 0 & 0 & 0 & 0 & \dots\\
+            0 & 0 & 0 & 0 & 0 & \dots\\
+            0 & 0 & 0 & 0 & 0 & \dots\\
+            F(1, 0) & 0 & 0 & 0 & F(1, 1) & \dots\\
+            \vdots & \vdots & \vdots & \vdots
+            \end{bmatrix}
+            $
+            
+            We want the final matrix's element $G(i, j) = \dfrac{4 - i \% 4}{4} \times F(i // 4, j) + \dfrac{i \% 4}{4} \times F(i // 4 + 1, j) + \dfrac{4 - j \% 4}{4} \times F(j // 4) + \dfrac{j \% 4}{4} \times F(i, j // 4 + 1)$ so that $G(i, j)$ linearly resembles the closest elements in $F(x, y)$.
+            
+            Thus for 2d quadruple linear interpolation, the filter should be 
+            \begin{align*}
+            h = 
+            \begin{bmatrix}
+            0.0625 & 0.125 & 0.1875 & 0.25 & 0.1875 & 0.125 & 0.0625 \\
+            0.125 & 0.25 & 0.375 & 0.5 & 0.375 & 0.25 & 0.125 \\
+            0.1875 & 0.375 & 0.5625 & 0.75 & 0.5625 & 0.375 &0.1875\\
+            0.25 & 0.5 & 0.75 & 1 &	0.75 & 0.5 & 0.25\\
+            0.1875 & 0.375 & 0.5625 & 0.75 & 0.5625 & 0.375 &0.1875\\
+            0.125  & 0.25 & 0.375 &	0.5 & 0.375 & 0.25 & 0.125\\
+            0.0625 & 0.125 & 0.1875 & 0.25 & 0.1875	& 0.125	& 0.0625
+            \end{bmatrix}
+            \end{align*}
+            
+            $h(i, j) = a * b$
+            where \\
+            $a = \dfrac{i}{4}$ if $i < 4$ and $a = \dfrac{8 - i}{4}$ if $i \geq 4$ and \\
+            $b = \dfrac{j}{4}$ if $j < 4$ and $b = \dfrac{8 - j}{4}$ if $j \geq 4$
+            
+            Generalizing to two dimensional linear interpolation for any $d$, the reconstruction filter is 
+            
             
             \begin{align*}
             h & = 
@@ -320,24 +363,25 @@
         
             \newpage
             \item 
-            The generated results are shown in Figure \ref{fig:2.3.1}.
+            The interest points are shown bellow
             
             \begin{figure}[!htb]
-                \includegraphics[width=\linewidth]{images/question_2/2_2_rerotated_R.jpg}
+                \includegraphics[width=\linewidth]{images/question_2/2_3_interest_points.jpg}
                 \centering
                 \caption{Interest points}
                 \label{fig:2.3.1}
             \end{figure}
         
-            By circling out the interest points on the original image, we get Figure \ref{fig:2.3.2}.
+            By circling out the interest points on the original image, we get Figure \ref{fig:2.3.21}.
             
             \begin{figure}[!htb]
-                \includegraphics[width=\linewidth]{images/question_2/2_2_rerotated_R.jpg}
+                \includegraphics[width=\linewidth]{images/question_2/2_3_result.jpg}
                 \centering
                 \caption{Image with interest points}
-                \label{fig:2.321}
+                \label{fig:2.3.21}
             \end{figure}
         
+            We can see that the interest points accurately point to the edges and corners of the image.
         
             \newpage
             \item 
@@ -345,6 +389,8 @@
             
             \textbf{Key point Detection}
             
+            The keypoint detection algorithm is similar to SIFT, but the blob detectors are different.
+                       
             In SURF, key points are detected using Box Filters that approximates LoGs.
             These Box Filters are easier to calculate using the Integral images. Integral images are sum of all the intensities of the image $ I_{\Sigma} (X) = \sum_{i = 0}^{i \leq x} \sum_{j = 0}^{j \leq y} I(i, j) $.
             
@@ -358,38 +404,25 @@
             \end{bmatrix}
             \end{equation}
             
-            where $ L_{xx}(p,\sigma )$ etc. is the convolution of the second-order derivative of gaussian with the image $I(x,y)$ at the point $p$.
+            where $ L_{xx}(p,\sigma )$ etc. are the convolution of the second-order derivative of gaussian with the image $I(x,y)$ at the point $p$.
             
             The determinant of the Hessian matrix is used as a measure of local change around the point and points are chosen where this determinant is maximal
             
             
             \textbf{Key point Descriptor}
             
-            In order to invariant to image rotation, we identify a reproducible orientation for the interest points. Because of that, first calculate
-            the Haar wavelet responses in x and y direction within a circular neighbourhood of radius 6s around the interest point, with scale
-            s (sampling step is depend on s) at which the interest point was detected. The size of wavelet which is scale depended and its side
-            length is 4s. 
+            The keypoint descriptor algorithm is also similar to SIFT.
             
-            Once the wavelet responses are calculated and weighted with a Gaussian σ=2s centered at the interest point. The responses
-            are represented as points in a space with the horizontal response strength along the abscissa and the vertical response strength along
-            the ordinate. Find maximum the sum of all responses which is wavelet response in every sliding window (π/3 window orientation)
-            (see figure 4). The horizontal and vertical responses within the window are summed. From these two horizontal and vertical,
-            summed responses then yield a local orientation vector. The orientation of the interest point can be defined by finding the longest
-            such vector over all windows.
+            1. fix a reproducible
+            orientation based on information from a circular region around the interest point.
             
-            To extract the descriptor, square region which size is 20s are constructed on interested points. Examples of such square
-            regions are illustrated in figure 5
+            This is done by calculating the Haar-wavelet responses
+            in $x$ and $y$ direction, and this in a circular neighbourhood of
+            radius $6s$ around the interest point, with $s$ the scale at which the interest point was detected
             
-            The wavelet responses dx and dy are summed up over each sub-region and form a first set of entries in the feature vector.
-            In order to bring in information about the polarity of the intensity changes, extract the sum of the absolute values of the responses,
-            |dx| and |dy|, each sub-region has a four-dimensional descriptor vector V for its underlying intensity structure V =
-            (∑ dx
-            , ∑ dy
-            , ∑ |dx
-            | , ∑ |dx
-            |). Concatenating this for all, 4 x 4 sub-regions, and this results in a descriptor vector of length is 64.
-            The wavelet responses are invariant to a bias in illumination (offset) and Invariance to contrast (a scale factor) is achieved by
-            turning the descriptor into a unit vector.
+            2. construct a square region aligned to the selected orientation, and extract the SURF descriptor from it. These two steps are now explained in turn.
+            
+            This is done by splitting the region up regularly into smaller 4 × 4 square sub-regions. For each sub-region, we compute a few simple features at 5×5 regularly spaced sample points. Then the features are weighted with Gaussian according to their location.
             
         
     	\end{enumerate}
@@ -446,10 +479,21 @@
             Difference of Gaussian
             
             \begin{align*}
-            G(x, y, \sigma_1) - G(x, y, \sigma_2) &= \frac{1}{\sqrt{2\pi \sigma_1^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma_1^2}} - \frac{1}{\sqrt{2\pi \sigma_2^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma_2^2}}
+            G(x, y, \sigma_1) - G(x, y, \sigma_2) &= \frac{1}{\sqrt{2\pi \sigma_1^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma_1^2}} - \frac{1}{\sqrt{2\pi \sigma_2^{2}}} e^{-\frac{x^2 + y^2}{2 \sigma_2^2}}\\
+            &= \frac{1}{\sqrt{2\pi }} (\dfrac{1}{\sigma_1} e^{-\frac{x^2 + y^2}{2 \sigma_1^2}} -  \dfrac{1}{\sigma_2} e^{-\frac{x^2 + y^2}{2 \sigma_2^2}})
             \end{align*}
             
-            % TODO
+            Setting $\sigma_1 = k \sigma_2$,
+            
+            \begin{align*}
+            G(x, y, \sigma_1) - G(x, y, \sigma_2) &= \frac{1}{\sqrt{2\pi }} (\dfrac{1}{k\sigma_2} e^{-\frac{x^2 + y^2}{2 k^2 \sigma_2^2}} -  \dfrac{1}{\sigma_2} e^{-\frac{x^2 + y^2}{2 \sigma_2^2}})\\
+            &= -\frac{1}{\sqrt{2\pi }} (1 - \dfrac{1}{k} e^{-\dfrac{(x^2 + y^2)}{k^2}}) e^{-\frac{x^2 + y^2}{2 \sigma_2^2}}
+            \end{align*}
+            
+            Note that this has similar form with the Laplacian of Gaussian.
+            
+            As the difference between $\sigma_1$ and $\sigma_2$ gets larger, $k$ gets larger as well. If $k$ gets either too large or too little, it will not be able to approximate LoG well.
+            
             
             
         \end{enumerate}
@@ -468,6 +512,7 @@
         See \textit{question\_4.py} for implementations. \textbf{The SIFT algorithm being used is implemented in OpenCV}
                 
         \begin{enumerate}
+            %	Part a: 
             \item
             
             The extracted SIFT feature points for sample1 and sample2 are shown in Figure \ref{fig:4.1}.
@@ -489,7 +534,8 @@
                 \caption{}
                 \label{fig:4.1}
             \end{figure}
-            
+        
+            %	Part b: 
             \item 
             
             The top 10 feature points calculated using L2 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.2}.
@@ -516,7 +562,7 @@
             The connected image is shown bellow
             
             \begin{figure}[!htb]
-                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_connected.png}
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_connected_L2.png}
                 \centering
                 \caption{}
                 \label{fig:4.2.3}
@@ -526,12 +572,13 @@
             By testing with different threshold values, the following graph was produced. This is reasonable because as we loosen our restrictions, more and more points will be matched between the two images.
             
             \begin{figure}[!htb]
-                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_match_vs_threshold_L2.png}
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_match_vs_threshold.png}
                 \centering
                 \caption{}
                 \label{fig:4.2.4}
             \end{figure}
             
+            %	Part c:
             \newpage
             \item 
             
@@ -539,13 +586,13 @@
             
             \begin{figure}[!htb]
                 \begin{subfigure}{.45\textwidth}
-                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_1_L1.jpg}
+                    \includegraphics[width=\linewidth]{images/question_4/4_2_marked_sample_1_L1.jpg}
                     \centering
                     \caption{Sample1 feature points}
                     \label{fig:4.3.1.1}
                 \end{subfigure}
                 \begin{subfigure}{.45\textwidth}
-                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_2_L1.jpg}
+                    \includegraphics[width=\linewidth]{images/question_4/4_2_marked_sample_2_L1.jpg}
                     \centering
                     \caption{Sample2 feature points}
                     \label{fig:4.3.1.2}
@@ -554,18 +601,28 @@
                 \caption{}
                 \label{fig:4.3.1}
             \end{figure}
-        
+            
+            The connected image is shown bellow
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_connected_L1.png}
+                \centering
+                \caption{}
+                \label{fig:4.3.1.3}
+            \end{figure}
+            
+            
             The top 10 feature points calculated using L3 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.3.2}.
             
             \begin{figure}[!htb]
                 \begin{subfigure}{.45\textwidth}
-                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_1_L3.jpg}
+                    \includegraphics[width=\linewidth]{images/question_4/4_2_marked_sample_1_L3.jpg}
                     \centering
                     \caption{Sample1 feature points}
                     \label{fig:4.3.2.1}
                 \end{subfigure}
                 \begin{subfigure}{.45\textwidth}
-                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_2_L3.jpg}
+                    \includegraphics[width=\linewidth]{images/question_4/4_2_marked_sample_2_L3.jpg}
                     \centering
                     \caption{Sample2 feature points}
                     \label{fig:4.3.2.2}
@@ -574,33 +631,132 @@
                 \caption{}
                 \label{fig:4.3.2}
             \end{figure}
+        
+            The connected image is shown bellow
             
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_2_connected_L3.png}
+                \centering
+                \caption{}
+                \label{fig:4.3.2.3}
+            \end{figure}
+        
+            We can see that the result for L1 is better because it contains more corners
+            
+            %	Part d:
             \newpage
-            \item 
             
-            The top 10 feature points of the noisy image calculated using L2 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.3.1}.
+            \item 
+            The marked feature points for the noisy images are shown bellow:
             
             \begin{figure}[!htb]
                 \begin{subfigure}{.45\textwidth}
-                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_1_L3.jpg}
+                    \includegraphics[width=\linewidth]{images/question_4/4_4_sample1_img.jpg}
                     \centering
                     \caption{Sample1 feature points}
-                    \label{fig:4.4.1}
+                    \label{fig:4.4.1.1}
                 \end{subfigure}
                 \begin{subfigure}{.45\textwidth}
-                    \includegraphics[width=\linewidth]{images/question_4/4_3_marked_sample_2_L3.jpg}
+                    \includegraphics[width=\linewidth]{images/question_4/4_4_sample2_img.jpg}
                     \centering
                     \caption{Sample2 feature points}
-                    \label{fig:4.4.2}
+                    \label{fig:4.4.1.2}
                 \end{subfigure}
                 \centering
                 \caption{}
-                \label{fig:4.4}
+                \label{fig:4.4.1}
             \end{figure}
             
+            \newpage
+            The top 10 feature points of the noisy image calculated using L2 norm and ratio threshold of 0.8 are labeled (white dots) on both sample1 and sample2 shown in Figure \ref{fig:4.3.1}.
+            
+            We can clearly see that adding noise to the image drastically changes the detected feature points.
+            
+            The detected points are mostly concentrated on the picture with black background because due to noise and image clipping, there are more white pixels and more likely to be detected as corners.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_4_marked_sample_1_L2.jpg}
+                    \centering
+                    \caption{Sample1 feature points}
+                    \label{fig:4.4.2.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_4_marked_sample_2_L2.jpg}
+                    \centering
+                    \caption{Sample2 feature points}
+                    \label{fig:4.4.2.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.4.2}
+            \end{figure}
+        
+            See the connected image below
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_4_connected_L2.png}
+                \centering
+                \caption{}
+                \label{fig:4.4.4}
+            \end{figure}
+            
+            \newpage
+            By testing with different threshold values, the following graph was produced. This is reasonable because as we loosen our restrictions, more and more points will be matched between the two images.
+            
+            Comparing to the graph produced in part b, this graph is steeper. This means that we are less likely to produce detect the feature points.
+            
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_4_match_vs_threshold.png}
+                \centering
+                \caption{}
+                \label{fig:4.4.3}
+            \end{figure}
+            
+            
+            \newpage
+            %	Part e:
             \item 
-            The idea is to find the dominant color channel of reference img and test img, then perform SIFT between these 2 dominant color channel. In this way we take the color of img into account cause we only perform computation with dominant color channel.
-            Drawing the line with green color.
+            See detected interest points and the images in the below. 
+            
+            The approach to perform SIFT on a colored image is to separately generate the key points and descriptors for each color channel, then stack them together. Then we calculate the minimum distance between two images using the descriptors. We compare the distances between all color channels and pick the minimum one.
+            
+            \begin{figure}[!htb]
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_5_marked_ct.png}
+                    \centering
+                    \caption{color template feature points}
+                    \label{fig:4.5.1.1}
+                \end{subfigure}
+                \begin{subfigure}{.45\textwidth}
+                    \includegraphics[width=\linewidth]{images/question_4/4_5_marked_cs.png}
+                    \centering
+                    \caption{color search feature points}
+                    \label{fig:4.5.1.2}
+                \end{subfigure}
+                \centering
+                \caption{}
+                \label{fig:4.5.1}
+            \end{figure}
+        
+            See the connected image below
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_5_connected_L2.png}
+                \centering
+                \caption{}
+                \label{fig:4.5.2}
+            \end{figure}
+        
+            \newpage
+        
+            Below is the match count vs threshold plot. In this question, the size of data (pixel) is not as plenty as the previous questions, so the curve is not fully shown. However, the relationship between the threshold and the match count is still positive. I.e. the looser we threshold the ratio, the more matches we will get.
+        
+            \begin{figure}[!htb]
+                \includegraphics[width=0.75\linewidth]{images/question_4/4_5_match_vs_threshold.png}
+                \centering
+                \caption{}
+                \label{fig:4.5.3}
+            \end{figure}
+            
         \end{enumerate}
         
         \end{homeworkProblem}

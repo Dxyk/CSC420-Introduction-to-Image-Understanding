@@ -216,11 +216,13 @@ def find_interest_points(img: np.ndarray,
     :param threshold: the threshold for checking if the laplacian is the extrema
     :return: a list of interest points and their coordinates
     """
+    import matplotlib.pyplot as plt
     interest_points = []
     scale_map: List[np.ndarray] = []
-    sigma_list = np.arange(0.5, 5.5, 0.5)
+    # sigma_list = np.arange(0.5, 5.5, 0.5)
+    sigma_list = [x / 10 for x in range(5, 55, 5)]
 
-    print("Using {0} sigmas: {1}".format(len(sigma_list), sigma_list.tolist()))
+    print("Using {0} sigmas: {1}".format(len(sigma_list), sigma_list))
 
     for sigma in sigma_list:
         Ix = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
@@ -230,6 +232,8 @@ def find_interest_points(img: np.ndarray,
         blur_Ix2 = cv2.GaussianBlur(Ix2, (15, 15), sigma)
         blur_Iy2 = cv2.GaussianBlur(Iy2, (15, 15), sigma)
         laplacian = np.sqrt(np.square(blur_Ix2) + np.square(blur_Iy2))
+        plt.imshow(laplacian, cmap='gray'), plt.axis('off')
+        plt.show()
         scale_map.append(laplacian)
 
     def get_neighbours(scale, x_coord, y_coord):
@@ -250,14 +254,15 @@ def find_interest_points(img: np.ndarray,
 
     h, w = img.shape[0], img.shape[1]
     for i in range(len(sigma_list)):
-        print("Processing {0} / {1} of the sigmas".format(i, len(sigma_list)))
+        print("Processing {0} / {1} of the sigmas: {2}".format(i, len(sigma_list), sigma_list[i]))
+        curr_sigma = sigma_list[i]
         for x in range(h):
             for y in range(w):
                 pixel = scale_map[i][x, y]
                 if pixel > threshold:
                     neighbours2 = get_neighbours(i, x, y)
-                    if pixel > max(neighbours2) or pixel < min(neighbours2):
-                        interest_points.append((x, y, sigma_list[i]))
+                    if all([pixel > n for n in neighbours2]) or all([pixel < n for n in neighbours2]):
+                        interest_points.append((x, y, curr_sigma))
     print("Found {0} interest points".format(len(interest_points)))
     return interest_points
 
@@ -270,7 +275,6 @@ def c_tuning() -> None:
         interest_points = find_interest_points(img_cpy, threshold=threshold)
         save_data(interest_points, "tuning_2_3_{}.pkl".format(threshold))
         interest_points = load_data("tuning_2_3_{}.pkl".format(threshold))
-        print(len(interest_points))
         tmp = np.zeros(img_cpy.shape)
         for x, y, sigma in interest_points:
             tmp[x, y] = 255
@@ -351,7 +355,7 @@ def part_c() -> None:
     tmp = np.zeros(img_cpy.shape)
     for x, y, sigma in interest_points:
         tmp[x, y] = 255
-        cv2.circle(img_cpy, (y, x), int(sigma * 3), (0, 0, 0), thickness=1)
+        img_cpy = cv2.circle(img_cpy, (y, x), int(sigma * 3), 0, thickness=2)
     save_image(tmp, "2_3_interest_points.jpg")
     save_image(img_cpy, "2_3_result.jpg")
 
@@ -359,7 +363,7 @@ def part_c() -> None:
 def main() -> None:
     # part_a()
 
-    # part_b()
+    # part_b_c()
 
     part_c()
 

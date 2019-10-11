@@ -95,164 +95,6 @@ def get_sift_kp_des(img: np.ndarray) -> Tuple[List[cv2.KeyPoint], np.ndarray]:
     return kp, des
 
 
-# ==================== Part b ====================
-def part_b(img1: np.ndarray, img2: np.ndarray, question: int = 2) -> None:
-    # sorted_matches = load_data(
-    #     "4_{}_matches_L{}.pkl".format(question, norm_type))
-    # if load and sorted_matches:
-    #     return sorted_matches
-
-    img1_kp, img1_des = get_sift_kp_des(img1)
-    img2_kp, img2_des = get_sift_kp_des(img2)
-
-    ratios = [r / 10 for r in range(1, 10)]
-
-    l1_matches = {ratio: [] for ratio in ratios}
-    l2_matches = {ratio: [] for ratio in ratios}
-    l3_matches = {ratio: [] for ratio in ratios}
-
-    ratio_match_count = {ratio: 0 for ratio in ratios}
-
-    # all_matches = []
-
-    # brute force loop through each pixel in sample1
-    for i, (kp_1, des_1) in enumerate(zip(img1_kp, img1_des)):
-        if i % 100 == 0:
-            print("Progress: {0}%\t{1} / {2}".format(i / len(img1_kp), i,
-                                                     len(img1_kp)))
-
-        # calculate the diffs between sample2 pixels and the curr sample1 pixel
-        diff = np.subtract(img2_des, des_1)
-
-        # we calculate dists for different order (L1 - L3)
-        for order in [1, 2, 3]:
-            dist = np.linalg.norm(diff, axis=1, ord=order)
-            # dist = np.zeros(diff.shape)
-            # for j in range(diff.shape[0]):
-            #     dist[j] = np.linalg.norm(diff[j], ord=order)
-
-            # get the mins after calculation
-            first_min = np.amin(dist)
-            min_idx = np.where(dist == first_min)[0][0]
-            kp_2 = img2_kp[min_idx]
-            second_min = np.amin(dist[dist != first_min])
-            curr_ratio = first_min / second_min
-
-            # figure out which dictionary to use
-            if order == 1:
-                curr_matches = l1_matches
-            elif order == 2:
-                curr_matches = l2_matches
-            else:
-                curr_matches = l3_matches
-
-            # add match to dictionary and update counter if the threshold is met
-            for ratio in ratios:
-                if curr_ratio <= ratio:
-                    curr_matches[ratio].append((curr_ratio, kp_1.pt, kp_2.pt))
-                    if order == 2:
-                        ratio_match_count[ratio] += 1
-                    # all_matches.append((curr_ratio, kp_1.pt, img2_kp[min_idx].pt))
-                else:
-                    break
-    # sorted_matches = sorted(all_matches, key=lambda x: x[0])
-    #
-    # if save:
-    #     save_data(sorted_matches,
-    #               "4_{}_matches_L{}.pkl".format(question, norm_type))
-
-    l1_10_best = sorted(l1_matches[0.8], key=lambda x: x[0])[:10]
-    l2_10_best = sorted(l2_matches[0.8], key=lambda x: x[0])[:10]
-    l3_10_best = sorted(l3_matches[0.8], key=lambda x: x[0])[:10]
-
-    # best_10 = sorted_matches[:10]
-    # print(len(best_10))
-
-    # mark the top keypoints on the images
-    for i in [1, 2, 3]:
-        if i == 1:
-            best_10 = l1_10_best
-        elif i == 2:
-            best_10 = l2_10_best
-        else:
-            best_10 = l3_10_best
-
-        marked_img1 = np.copy(img1)
-        marked_img2 = np.copy(img2)
-        for match in best_10:
-            print(match)
-            point_1 = (int(match[1][0]), int(match[1][1]))
-            point_2 = (int(match[2][0]), int(match[2][1]))
-            marked_img1 = cv2.circle(marked_img1, point_1, 7, 255, -1)
-            marked_img2 = cv2.circle(marked_img2, point_2, 7, 255, -1)
-
-        save_image(marked_img1,
-                   "4_{}_marked_sample_1_L{}.jpg".format(question, i))
-        save_image(marked_img2,
-                   "4_{}_marked_sample_2_L{}.jpg".format(question, i))
-
-    # plot the ratio matches count
-    fig = plt.figure()
-    matches = []
-    for ratio in ratios:
-        matches.append(ratio_match_count[ratio])
-    plt.plot(ratios, matches)
-    fig.suptitle('Match count against Threshold', fontsize=20)
-    plt.xlabel('Threshold', fontsize=18)
-    plt.ylabel('Number of matches', fontsize=16)
-    # plt.show()
-    plt.savefig(
-        OUT_PATH + "4_{}_match_vs_threshold.png".format(question))
-
-    # return sorted_matches
-
-
-def plot_matches_against_threshold(use_existing_data: bool = False,
-                                   norm: int = 2, question: int = 2) -> None:
-    """
-    Plots the match counts against the thresholds
-    :param use_existing_data: true if load from pickle
-    :param norm: the norm
-    :param question: the question number
-    :return: the question number
-    """
-    ratios = np.arange(0.1, 1.0, 0.1)
-    matches = load_data(
-        "4_{}_match_against_threshold_L{}.pkl".format(question, norm))
-    if not use_existing_data or not matches:
-        sample1_des = load_data("sample1_des.pkl")
-        sample2_des = load_data("sample2_des.pkl")
-        matches = [0] * len(ratios)
-        for i, des_1 in enumerate(sample1_des):
-            if i % 100 == 0:
-                print("Progress: {0}%\t{1} / {2}".format(i / len(sample1_des),
-                                                         i, len(sample1_des)))
-            diff = np.subtract(sample2_des, des_1)
-            dist = np.zeros(diff.shape)
-            for i in range(diff.shape[0]):
-                dist[i] = np.linalg.norm(diff[i])
-            first_min = np.amin(dist)
-            second_min = np.amin(dist[dist != first_min])
-            curr_ratio = first_min / second_min
-
-            for i in range(len(ratios)):
-                if curr_ratio <= ratios[i]:
-                    matches[i] += 1
-
-        save_data(matches,
-                  "4_{}_match_against_threshold_L{}.pkl".format(question, norm))
-
-    fig = plt.figure()
-    plt.plot(ratios.tolist(), matches)
-    fig.suptitle('Match count against Threshold', fontsize=20)
-    plt.xlabel('Threshold', fontsize=18)
-    plt.ylabel('Number of matches', fontsize=16)
-    # plt.show()
-    plt.savefig(
-        OUT_PATH + "4_{}_match_vs_threshold_L{}.png".format(question, norm))
-    return matches
-
-
 # ==================== Part e ====================
 def get_dominant_color_channel(img):
     red_sum = np.sum(img[:, :, 2])
@@ -324,35 +166,104 @@ def part_a(img1: np.ndarray, img2: np.ndarray, question: int = 1) -> None:
     save_image(sample2_copy, "4_{}_sample2_img.jpg".format(question))
 
 
-# def part_b(img1: np.ndarray, img2: np.ndarray, norm: int = 2,
-#            question: int = 2) -> None:
-#     # matching
-#     sorted_matches = get_sorted_matches(norm_type=norm, question=question,
-#                                         load=False)
-#     best_10 = sorted_matches[:10]
-#     print(len(best_10))
-#     marked_sample1 = np.copy(img1)
-#     marked_sample2 = np.copy(img2)
-#     for match in best_10:
-#         print(match)
-#         point_1 = (int(match[1][0]), int(match[1][1]))
-#         point_2 = (int(match[2][0]), int(match[2][1]))
-#         marked_sample1 = cv2.circle(marked_sample1, point_1, 5, 255, -1)
-#         marked_sample2 = cv2.circle(marked_sample2, point_2, 5, 255, -1)
-#
-#     save_image(marked_sample1,
-#                "4_{}_marked_sample_1_L{}.jpg".format(question, norm))
-#     save_image(marked_sample2,
-#                "4_{}_marked_sample_2_L{}.jpg".format(question, norm))
-#
-#     # threshold tuning
-#     plot_matches_against_threshold(use_existing_data=False, norm=norm,
-#                                    question=question)
+def part_b_c(img1: np.ndarray, img2: np.ndarray, question: int = 2) -> None:
+    # sorted_matches = load_data(
+    #     "4_{}_matches_L{}.pkl".format(question, norm_type))
+    # if load and sorted_matches:
+    #     return sorted_matches
 
+    img1_kp, img1_des = get_sift_kp_des(img1)
+    img2_kp, img2_des = get_sift_kp_des(img2)
 
-# def part_c():
-#     for norm in [1, 3]:
-#         part_b(sample1_gray, sample2_gray, norm=norm, question=3)
+    ratios = [r / 10 for r in range(1, 10)]
+
+    l1_matches = {ratio: [] for ratio in ratios}
+    l2_matches = {ratio: [] for ratio in ratios}
+    l3_matches = {ratio: [] for ratio in ratios}
+
+    l1_ratio_match_count = {ratio: 0 for ratio in ratios}
+    l2_ratio_match_count = {ratio: 0 for ratio in ratios}
+    l3_ratio_match_count = {ratio: 0 for ratio in ratios}
+
+    # brute force loop through each pixel in sample1
+    for i, (kp_1, des_1) in enumerate(zip(img1_kp, img1_des)):
+        if i % 100 == 0:
+            print("Progress: {0} / {1}".format(i, len(img1_kp)))
+
+        # calculate the diffs between sample2 pixels and the curr sample1 pixel
+        diff = np.subtract(img2_des, des_1)
+
+        # we calculate dists for different order (L1 - L3)
+        for order in [1, 2, 3]:
+            dist = np.linalg.norm(diff, axis=1, ord=order)
+
+            # get the mins after calculation
+            first_min = np.amin(dist)
+            min_idx = np.where(dist == first_min)[0][0]
+            kp_2 = img2_kp[min_idx]
+            second_min = np.amin(dist[dist != first_min])
+            curr_ratio = first_min / second_min
+
+            # figure out which dictionary to use
+            if order == 1:
+                curr_matches = l1_matches
+                ratio_match_count = l1_ratio_match_count
+            elif order == 2:
+                curr_matches = l2_matches
+                ratio_match_count = l2_ratio_match_count
+            else:
+                curr_matches = l3_matches
+                ratio_match_count = l3_ratio_match_count
+
+            # add match to dictionary and update counter if the threshold is met
+            for ratio in ratios:
+                if curr_ratio <= ratio:
+                    curr_matches[ratio].append((curr_ratio, kp_1.pt, kp_2.pt))
+                    ratio_match_count[ratio] += 1
+
+    l1_10_best = sorted(l1_matches[0.8], key=lambda x: x[0])[:10]
+    l2_10_best = sorted(l2_matches[0.8], key=lambda x: x[0])[:10]
+    l3_10_best = sorted(l3_matches[0.8], key=lambda x: x[0])[:10]
+
+    print(len(l1_10_best), len(l2_10_best), len(l3_10_best))
+
+    # mark the top keypoints on the images
+    for i in [1, 2, 3]:
+        if i == 1:
+            best_10 = l1_10_best
+        elif i == 2:
+            best_10 = l2_10_best
+        else:
+            best_10 = l3_10_best
+
+        marked_img1 = np.copy(img1)
+        marked_img2 = np.copy(img2)
+        marked_img1 = cv2.cvtColor(marked_img1, cv2.COLOR_GRAY2RGB)
+        marked_img2 = cv2.cvtColor(marked_img2, cv2.COLOR_GRAY2RGB)
+        for match in best_10:
+            print(match)
+            point_1 = (int(match[1][0]), int(match[1][1]))
+            point_2 = (int(match[2][0]), int(match[2][1]))
+            marked_img1 = cv2.circle(marked_img1, point_1, 7, (0, 0, 255), -1)
+            marked_img2 = cv2.circle(marked_img2, point_2, 7, (0, 0, 255), -1)
+
+        save_image(marked_img1,
+                   "4_{}_marked_sample_1_L{}.jpg".format(question, i))
+        save_image(marked_img2,
+                   "4_{}_marked_sample_2_L{}.jpg".format(question, i))
+
+    # plot the ratio matches count
+    fig = plt.figure()
+    matches = []
+    for ratio in ratios:
+        matches.append(l1_ratio_match_count[ratio])
+    plt.plot(ratios, matches)
+    fig.suptitle('Match count against Threshold', fontsize=20)
+    plt.xlabel('Threshold', fontsize=18)
+    plt.ylabel('Number of matches', fontsize=16)
+    # plt.show()
+    plt.savefig(
+        OUT_PATH + "4_{}_match_vs_threshold.png".format(question))
 
 
 def part_d():
@@ -372,10 +283,121 @@ def part_d():
     noisy_sample2 = np.uint8(noisy_sample2 * 255)
 
     part_a(noisy_sample1, noisy_sample2, question=4)
-    part_b(noisy_sample1, noisy_sample2, question=4)
+    part_b_c(noisy_sample1, noisy_sample2, question=4)
 
 
 def part_e(img1, img2):
+    # img1_main = colour_template[:, :, get_dominant_color_channel(img1)]
+    # img2_main = colour_template[:, :, get_dominant_color_channel(img2)]
+
+    img1_kp1, img1_des1 = get_sift_kp_des(img1[:, :, 0])
+    img2_kp1, img2_des1 = get_sift_kp_des(img2[:, :, 0])
+    combined_img1_kp = img1_kp1
+    combined_img2_kp = img2_kp1
+    combined_img1_des = img1_des1
+    combined_img2_des = img2_des1
+
+    # we skip this because Green is 0 in the image.
+    # img1_kp2, img1_des2 = get_sift_kp_des(img1[:, :, 1])
+    # img2_kp2, img2_des2 = get_sift_kp_des(img2[:, :, 1])
+    # combined_img1_des = np.stack((combined_img1_des, img1_des2))
+    # combined_img2_des = np.stack((combined_img2_des, img2_des2))
+
+    img1_kp3, img1_des3 = get_sift_kp_des(img1[:, :, 2])
+    img2_kp3, img2_des3 = get_sift_kp_des(img2[:, :, 2])
+    combined_img1_des = np.concatenate((combined_img1_des, img1_des3), axis=0)
+    combined_img2_des = np.concatenate((combined_img2_des, img2_des3), axis=0)
+    combined_img1_kp.extend(img1_kp3)
+    combined_img2_kp.extend(img2_kp3)
+
+    ratios = [r / 10 for r in range(1, 10)]
+
+    l1_matches = {ratio: [] for ratio in ratios}
+    l2_matches = {ratio: [] for ratio in ratios}
+    l3_matches = {ratio: [] for ratio in ratios}
+
+    l1_ratio_match_count = {ratio: 0 for ratio in ratios}
+    l2_ratio_match_count = {ratio: 0 for ratio in ratios}
+    l3_ratio_match_count = {ratio: 0 for ratio in ratios}
+
+    # brute force loop through each pixel in sample1
+    for i, (kp_1, des_1) in enumerate(zip(combined_img1_kp, combined_img1_des)):
+        if i % 100 == 0:
+            print("Progress: {0} / {1}".format(i, len(combined_img1_kp)))
+
+        # calculate the diffs between sample2 pixels and the curr sample1 pixel
+        diff = np.subtract(combined_img2_des, des_1)
+
+        # we calculate dists for different order (L1 - L3)
+        for order in [1, 2, 3]:
+            dist = np.linalg.norm(diff, axis=1, ord=order)
+
+            # get the mins after calculation
+            first_min = np.amin(dist)
+            min_idx = np.where(dist == first_min)[0][0]
+            kp_2 = combined_img2_kp[min_idx]
+            second_min = np.amin(dist[dist != first_min])
+            curr_ratio = first_min / second_min
+
+            # figure out which dictionary to use
+            if order == 1:
+                curr_matches = l1_matches
+                ratio_match_count = l1_ratio_match_count
+            elif order == 2:
+                curr_matches = l2_matches
+                ratio_match_count = l2_ratio_match_count
+            else:
+                curr_matches = l3_matches
+                ratio_match_count = l3_ratio_match_count
+
+            # add match to dictionary and update counter if the threshold is met
+            for ratio in ratios:
+                if curr_ratio <= ratio:
+                    curr_matches[ratio].append((curr_ratio, kp_1.pt, kp_2.pt))
+                    ratio_match_count[ratio] += 1
+
+    l1_10_best = sorted(l1_matches[0.8], key=lambda x: x[0])[:10]
+    l2_10_best = sorted(l2_matches[0.8], key=lambda x: x[0])[:10]
+    l3_10_best = sorted(l3_matches[0.8], key=lambda x: x[0])[:10]
+
+    print(len(l1_10_best), len(l2_10_best), len(l3_10_best))
+
+    # mark the top keypoints on the images
+    for i in [1, 2, 3]:
+        if i == 1:
+            best_10 = l1_10_best
+        elif i == 2:
+            best_10 = l2_10_best
+        else:
+            best_10 = l3_10_best
+
+        marked_img1 = np.copy(img1)
+        marked_img2 = np.copy(img2)
+        for match in best_10:
+            print(match)
+            point_1 = (int(match[1][0]), int(match[1][1]))
+            point_2 = (int(match[2][0]), int(match[2][1]))
+            marked_img1 = cv2.circle(marked_img1, point_1, 7, (255, 255, 255), -1)
+            marked_img2 = cv2.circle(marked_img2, point_2, 7, (255, 255, 255), -1)
+
+        save_image(marked_img1,
+                   "4_5_marked_sample_1_L{}.jpg".format(i))
+        save_image(marked_img2,
+                   "4_5_marked_sample_2_L{}.jpg".format(i))
+
+    # plot the ratio matches count
+    fig = plt.figure()
+    matches = []
+    for ratio in ratios:
+        matches.append(l1_ratio_match_count[ratio])
+    plt.plot(ratios, matches)
+    fig.suptitle('Match count against Threshold', fontsize=20)
+    plt.xlabel('Threshold', fontsize=18)
+    plt.ylabel('Number of matches', fontsize=16)
+    # plt.show()
+    plt.savefig(
+        OUT_PATH + "4_5_match_vs_threshold.png")
+
     sorted_matches = get_sorted_match_e(img1, img2)
 
     best_10 = sorted_matches[:10]
@@ -385,32 +407,26 @@ def part_e(img1, img2):
         print(match)
         point_1 = (int(match[1][0]), int(match[1][1]))
         point_2 = (int(match[2][0]), int(match[2][1]))
-        marked_sample1 = cv2.circle(marked_sample1, point_1, 5, 255, -1)
-        marked_sample2 = cv2.circle(marked_sample2, point_2, 5, 255, -1)
+        marked_sample1 = cv2.circle(marked_sample1, point_1, 5, (255, 255, 255), -1)
+        marked_sample2 = cv2.circle(marked_sample2, point_2, 5, (255, 255, 255), -1)
 
     save_image(marked_sample1, "4_5_marked_ct.png")
     save_image(marked_sample2, "4_5_marked_cs.png")
 
-    # threshold tuning
-    # plot_matches_against_threshold(use_existing_data=True, norm=2,
-    #                                question=5)
 
 
 def main() -> None:
     # print("{0} a {0}".format("=" * 15))
     # part_a(sample1_gray, sample2_gray)
 
-    print("{0} b {0}".format("=" * 15))
-    part_b(sample1_gray, sample2_gray)
-
-    # print("{0} c {0}".format("=" * 15))
-    # part_c()
+    # print("{0} b, c {0}".format("=" * 15))
+    # part_b_c(sample1_gray, sample2_gray)
 
     # print("{0} d {0}".format("=" * 15))
     # part_d()
-    #
-    # print("{0} e {0}".format("=" * 15))
-    # part_e(colour_template, colour_search)
+
+    print("{0} e {0}".format("=" * 15))
+    part_e(colour_template, colour_search)
 
 
 if __name__ == '__main__':
