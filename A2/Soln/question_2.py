@@ -355,7 +355,7 @@ def part_c() -> None:
     tmp = np.zeros(img_cpy.shape)
     for x, y, sigma in interest_points:
         tmp[x, y] = 255
-        img_cpy = cv2.circle(img_cpy, (y, x), int(sigma * 3), 0, thickness=2)
+        img_cpy = cv2.circle(img_cpy, (y, x), 4, 0, thickness=2)
     save_image(tmp, "2_3_interest_points.jpg")
     save_image(img_cpy, "2_3_result.jpg")
 

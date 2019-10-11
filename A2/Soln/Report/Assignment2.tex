@@ -230,7 +230,7 @@
             \end{bmatrix}
             \end{align*}
             
-            $h(i, j) = a * b$
+            $h(i, j) = a \times b$
             where \\
             $a = \dfrac{i}{4}$ if $i < 4$ and $a = \dfrac{8 - i}{4}$ if $i \geq 4$ and \\
             $b = \dfrac{j}{4}$ if $j < 4$ and $b = \dfrac{8 - j}{4}$ if $j \geq 4$
@@ -296,7 +296,7 @@
         
     	\begin{enumerate}
     		\item
-            The outputs of the corner detection functions are listed in Figure \ref{fig:2.1}.
+            The outputs for Harris corner detection is shown in Figure \ref{fig:2.1.1}.
             
             After tuning with different alpha values, $\alpha = 0.06$ was picked because it produced the least amount of noise.
             
@@ -306,6 +306,8 @@
                 \caption{Harris corner detection}
                 \label{fig:2.1.1}
             \end{figure}
+        
+            The output for Brown Corner detection is shown in Figure \ref{fig:2.1.2}
             \begin{figure}[!htb]
                 \includegraphics[width=\linewidth]{images/question_2/2_1_Brown.jpg}
                 \centering
@@ -348,9 +350,9 @@
             
             \newpage
         
-            By rotating the detected corners, we get the following Figure \ref{fig:2.2.4}.
+            By rotating the detected corners back, we get the following Figure \ref{fig:2.2.4}.
             
-            To prove that the detected points are also rotated by the same angle, we count the number of detected corners in the rotated image ($num\_total\_rotated$). Then we also count the number of corners in the original image corresponding to the corners in the rotated image ($num\_match$). Then we take the fraction of those two $\dfrac{num\_match}{num\_total\_rotated}$. The result was $99\%$ which is sufficient to prove that the detected corners are the same.
+            To prove that the detected points are also rotated by the same angle, we count the number of detected corners in the rotated image ($num\_total\_rotated$). Then we also count the number of corners in the original image corresponding to the coordinates of the corners in the rotated image ($num\_match$). Then we take the fraction of those two $\dfrac{num\_match}{num\_total\_rotated}$. The result was $99\%$ which is sufficient to prove that the detected corners are the same.
             
             Note that we didn't count the total number of detected corner in the original image ($num\_total\_original$) and compare it with the number of corners detected in the rotated image because rotating the image will caused some information loss, and this measurement won't be accurate.
             
@@ -363,7 +365,7 @@
         
             \newpage
             \item 
-            The interest points are shown bellow
+            The interest points detected using different layers of Laplacian of Gaussian are shown bellow
             
             \begin{figure}[!htb]
                 \includegraphics[width=\linewidth]{images/question_2/2_3_interest_points.jpg}
@@ -389,7 +391,7 @@
             
             \textbf{Key point Detection}
             
-            The keypoint detection algorithm is similar to SIFT, but the blob detectors are different.
+            The key point detection algorithm is similar to that of SIFT's, but the blob detectors are different.
                        
             In SURF, key points are detected using Box Filters that approximates LoGs.
             These Box Filters are easier to calculate using the Integral images. Integral images are sum of all the intensities of the image $ I_{\Sigma} (X) = \sum_{i = 0}^{i \leq x} \sum_{j = 0}^{j \leq y} I(i, j) $.
@@ -406,15 +408,14 @@
             
             where $ L_{xx}(p,\sigma )$ etc. are the convolution of the second-order derivative of gaussian with the image $I(x,y)$ at the point $p$.
             
-            The determinant of the Hessian matrix is used as a measure of local change around the point and points are chosen where this determinant is maximal
+            The determinant of the Hessian matrix is used as a measure of local change around the point and points are chosen where this determinant is maximal.
             
             
             \textbf{Key point Descriptor}
             
             The keypoint descriptor algorithm is also similar to SIFT.
             
-            1. fix a reproducible
-            orientation based on information from a circular region around the interest point.
+            1. fix a reproducible orientation based on information from a circular region around the interest point.
             
             This is done by calculating the Haar-wavelet responses
             in $x$ and $y$ direction, and this in a circular neighbourhood of
@@ -569,7 +570,7 @@
             \end{figure}
         
 
-            By testing with different threshold values, the following graph was produced. This is reasonable because as we loosen our restrictions, more and more points will be matched between the two images.
+            By testing with different threshold values, the following graph was produced. This is reasonable because as we loosen our restrictions, more and more points will be matched between the two images. (we accept more less distinctive points)
             
             \begin{figure}[!htb]
                 \includegraphics[width=0.75\linewidth]{images/question_4/4_2_match_vs_threshold.png}
@@ -641,7 +642,7 @@
                 \label{fig:4.3.2.3}
             \end{figure}
         
-            We can see that the result for L1 is better because it contains more corners
+            From the results, we conclude that all the detected points are plausible. However for L3, there are more points that are too close to each other, and for L2, there are points detected that are less corner-like. Thus L1 is better in this case because it contains more corners
             
             %	Part d:
             \newpage
@@ -672,7 +673,7 @@
             
             We can clearly see that adding noise to the image drastically changes the detected feature points.
             
-            The detected points are mostly concentrated on the picture with black background because due to noise and image clipping, there are more white pixels and more likely to be detected as corners.
+            This is because adding noise will change the pixel's descriptor because the magnitude and the orientation of the gradient near each pixel will change due to the noise.
             
             \begin{figure}[!htb]
                 \begin{subfigure}{.45\textwidth}
