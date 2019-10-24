@@ -124,15 +124,17 @@ def dice_loss(prediction, label):
                 (iflat.sum() + tflat.sum() + smooth))
 
 
-def part1():
-    """ Part 1 """
+def bce_loss(prediction, label):
+    prediction_flat = prediction.view(-1)
+    label_flat = label.view(-1)
+    return nn.BCELoss()(prediction_flat, label_flat)
+
+
+def train(criterion):
     unet_model = UNet().float()
 
     if use_gpu:
         unet_model = unet_model.cuda()
-
-    criterion1 = nn.NLLLoss()
-    criterion2 = dice_loss
 
     optimizer = optim.Adam(unet_model.parameters(), lr=0.003)
 
@@ -145,10 +147,8 @@ def part1():
             if use_gpu:
                 images, labels = images.cuda(), labels.cuda()
             prediction = unet_model(images.float())
-            print(prediction.shape)
-            print(labels.shape)
 
-            loss = criterion1(prediction, labels)
+            loss = criterion(prediction, labels.float())
             running_loss += loss.item()
 
             optimizer.zero_grad()
@@ -157,6 +157,15 @@ def part1():
 
         else:
             print(f"Training loss: {running_loss / len(train_data_loader)}")
+
+
+def part1():
+    """ Part 1 """
+    criterion1 = bce_loss
+    # criterion1 = nn.CrossEntropyLoss()
+    criterion2 = dice_loss
+    train(criterion1)
+    train(criterion2)
 
 
 def main():
