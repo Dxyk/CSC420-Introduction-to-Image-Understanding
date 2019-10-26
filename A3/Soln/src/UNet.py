@@ -9,7 +9,7 @@ class UNet(nn.Module):
     The UNet model
     """
 
-    def __init__(self, num_channels: int = 1, num_classes: int = 1,
+    def __init__(self, num_channels: int = 1, num_classes: int = 2,
                  num_filters: int = 64):
         """
         Initialize the UNet Model
