@@ -78,9 +78,12 @@ class CatDataset(Dataset):
         image = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
         image = image[np.newaxis, :, :]
 
-        label = cv2.imread(str(label_path), cv2.IMREAD_GRAYSCALE)
-        label = label[np.newaxis, :, :]
-        # return image, label
+        label_img = cv2.imread(str(label_path), cv2.IMREAD_GRAYSCALE)
+        label = np.zeros((2, label_img.shape[0], label_img.shape[1]))
+        label[0] = (label_img != 0).astype(int)
+        label[1] = (label_img == 0).astype(int)
+
+        # return image, label_img
         return image_path.name, label_path.name, image, label
 
 
@@ -136,7 +139,7 @@ def bce_loss(prediction, label):
 
 
 def train(criterion):
-    unet_model = UNet().float()
+    unet_model = UNet()
 
     if use_gpu:
         unet_model = unet_model.cuda()
@@ -146,7 +149,7 @@ def train(criterion):
     for e in range(epochs):
         unet_model.train()
         running_loss = 0
-        for images, labels in tqdm(train_data_loader):
+        for img_names, label_names, images, labels in tqdm(train_data_loader):
             if use_gpu:
                 images, labels = images.cuda(), labels.cuda()
             prediction = unet_model(images.float())
@@ -159,8 +162,8 @@ def train(criterion):
             optimizer.step()
 
         else:
-            print(f"Training loss: {running_loss / len(train_data_loader)}")
-
+            print("Training loss: {}".format(
+                running_loss / len(train_data_loader)))
             if 1:
                 target_path = Path(CHECKPOINT_PATH).joinpath(
                     'CP{}.pth'.format(e + 1))
@@ -171,11 +174,8 @@ def train(criterion):
 
 def part1():
     """ Part 1 """
-    criterion1 = bce_loss
-    # criterion1 = nn.CrossEntropyLoss()
-    criterion2 = dice_loss
-    train(criterion1)
-    train(criterion2)
+    train(bce_loss)
+    # train(dice_loss)
 
 
 def main():
@@ -183,15 +183,13 @@ def main():
 
 
 if __name__ == '__main__':
-    resize_data()
+    # resize_data()
 
     # ==================== Hyper-Parameters ====================
     epochs = 3
     use_gpu = False
     batch_size = 3
     transform = None
-    # transform = transforms.Compose([transforms.ToTensor(),
-    #                                 transforms.Normalize((0.5,), (0.5,))])
 
     # ==================== Load Data ====================
     print("{0} Loading Data {0}".format("=" * 10))
@@ -203,15 +201,5 @@ if __name__ == '__main__':
                                   shuffle=True)
     print("{0} Done {0}".format("=" * 10))
 
-    # ==================== Test Data ====================
-    # img_path, label_path, image, label = next(iter(train_data_loader))
-    # # img_path, label_path, image, label = next(iter(test_data_loader))
-    # print(img_path)
-    # print(label_path)
-    # print(image.shape, label.shape)
-    # f, axarr = plt.subplots(1, 2)
-    # axarr[0].imshow(image[0, 0, :], cmap="gray")
-    # axarr[1].imshow(label[0, 0, :], cmap="gray")
-    # plt.show()
-
+    # ==================== Main ====================
     main()
