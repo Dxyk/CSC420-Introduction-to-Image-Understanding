@@ -1,4 +1,4 @@
-from torch import nn, optim  # using torch.Tensor is annoying
+from torch import nn, optim
 from torch.utils.data import DataLoader
 
 from UNet import UNet
@@ -34,7 +34,27 @@ def bce_loss(prediction, label):
     return nn.BCELoss()(prediction_flat, label_flat)
 
 
-def train(criterion, save_model=True):
+def eval_net(net, data_loader):
+    """Evaluation without the densecrf with the dice coefficient"""
+    net.eval()
+    total = 0
+    for image, label in data_loader:
+        image = torch.from_numpy(image).unsqueeze(0)
+        label = torch.from_numpy(label).unsqueeze(0)
+
+        if use_gpu:
+            image = image.cuda()
+            label = label.cuda()
+
+        mask_pred = net(image)[0]
+        mask_pred = (mask_pred > 0.5).float()
+
+        total += dice_loss(mask_pred, label).item()
+    return total / (len(data_loader) + 1)
+
+
+def train(criterion, train_data_loader, test_data_loader, save_model=True,
+          save_name=""):
     unet_model = UNet().float()
 
     if use_gpu:
@@ -43,7 +63,9 @@ def train(criterion, save_model=True):
     optimizer = optim.Adam(unet_model.parameters(), lr=alpha)
 
     train_losses, test_losses = [], []
+    print("{0} Training Start {0}".format("=" * 10))
     for e in range(epochs):
+        print("{0} Epoch {1} / {2} {0}".format("=" * 5, e + 1, epochs))
         unet_model.train()
         running_loss = 0
         for images, labels in train_data_loader:
@@ -58,6 +80,11 @@ def train(criterion, save_model=True):
             loss.backward()
             optimizer.step()
         else:
+            print("{0} Results {0}".format("=" * 5))
+
+            val_dice = eval_net(unet_model, test_data_loader)
+            print('Validation Dice Coeff: {}'.format(val_dice))
+
             test_loss = 0
             accuracy = 0
             # Turn off gradients for validation, saves memory and computations
@@ -69,17 +96,18 @@ def train(criterion, save_model=True):
                         images, labels = images.cuda(), labels.cuda()
                     log_ps = unet_model(images)
                     test_loss += criterion(log_ps, labels)
+                    # todo: accuracy doesn' look right
 
-                    ps = torch.exp(log_ps)
-                    top_p, top_class = ps.topk(1, dim=1)
-                    labeled = labels[:, 1, :, :]
+                    # ps = torch.exp(log_ps)
+                    top_p, top_class = log_ps.topk(1, dim=1)
+                    print(top_class.shape)
+                    labeled = labels[:, 0, :, :]
                     equals = labeled.view(*top_class.shape)
                     accuracy += torch.mean(equals.type(torch.FloatTensor))
 
             train_losses.append(running_loss / len(train_data_loader))
             test_losses.append(test_loss / len(test_data_loader))
 
-            print("Epoch: {}/{}.. ".format(e + 1, epochs))
             print("Training Loss: {:.3f}.. ".format(
                 running_loss / len(train_data_loader)))
             print("Test Loss: {:.3f}.. ".format(
@@ -92,19 +120,56 @@ def train(criterion, save_model=True):
         if save_model:
             criterion_name = "BCE" if criterion == bce_loss else "Dice"
             target_path = Path(CHECKPOINT_PATH).joinpath(
-                'CP_{}_{}.pth'.format(criterion_name, e + 1))
+                'CP_{}_{}_{}.pth'.format(save_name, criterion_name, e + 1))
             torch.save(unet_model.state_dict(), str(target_path))
-            print('Checkpoint {}_{} saved !'.format(criterion_name, e + 1))
+            print('Checkpoint {}_{} saved !'.format(save_name, criterion_name,
+                                                    e + 1))
 
 
 def part1():
     """ Part 1 """
-    train(bce_loss)
-    train(dice_loss)
+    # ==================== Load Data ====================
+    print("{0} Part 1 {0}".format("=" * 10))
+    print("{0} Loading Data {0}".format("=" * 5))
+    train_dataset = CatDataset(TRAIN_PATH, is_train=True)
+    test_dataset = CatDataset(TEST_PATH, is_train=False)
+    train_data_loader = DataLoader(train_dataset, batch_size=batch_size,
+                                   shuffle=True)
+    test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+    print("{0} Done Loading {0}".format("=" * 5))
+
+    train(bce_loss, train_data_loader, test_data_loader, save_name="q1")
+    train(dice_loss, train_data_loader, test_data_loader, save_name="q1")
+
+
+def part2():
+    # ==================== Load Data ====================
+    print("{0} Part 2 {0}".format("=" * 10))
+    print("{0} Loading Data {0}".format("=" * 5))
+    all_transforms = transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.RandomRotation([15, 60]),
+        transforms.RandomResizedCrop(STANDARD_DIMS),
+        transforms.ToTensor()
+    ])
+
+    train_dataset = CatDataset(TRAIN_PATH, transforms=all_transforms,
+                               is_train=True)
+    test_dataset = CatDataset(TEST_PATH, transforms=all_transforms,
+                              is_train=False)
+    train_data_loader = DataLoader(train_dataset, batch_size=batch_size,
+                                   shuffle=True)
+    test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+    print("{0} Done Loading {0}".format("=" * 5))
+
+    train(bce_loss, train_data_loader, test_data_loader, save_name="q2")
+    train(dice_loss, train_data_loader, test_data_loader, save_name="q2")
 
 
 def main():
     part1()
+    part2()
 
 
 if __name__ == '__main__':
@@ -113,18 +178,7 @@ if __name__ == '__main__':
     # set to true in colab
     use_gpu = False
     batch_size = 3
-    transform = None
     alpha = 3 * 1e-4
-
-    # ==================== Load Data ====================
-    print("{0} Loading Data {0}".format("=" * 10))
-    train_dataset = CatDataset(TRAIN_PATH, transform=transform, is_train=True)
-    test_dataset = CatDataset(TEST_PATH, transform=transform, is_train=False)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size,
-                                   shuffle=True)
-    test_data_loader = DataLoader(test_dataset, batch_size=batch_size,
-                                  shuffle=True)
-    print("{0} Done {0}".format("=" * 10))
 
     # ==================== Main ====================
     main()

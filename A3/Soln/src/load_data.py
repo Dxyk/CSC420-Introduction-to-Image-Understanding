@@ -7,6 +7,7 @@ import torch
 from torch import Tensor  # using torch.Tensor is annoying
 from torch.utils.data import Dataset
 from torchvision import transforms
+from torchvision.transforms import functional
 
 # ==================== CONSTANTS ====================
 TRAIN_PATH = "./cat_data/Train/"
@@ -60,23 +61,23 @@ class CatDataset(Dataset):
     input_dir: Path
     mask_dir: Path
     num_data: int
-    transform: transforms
+    transforms: transforms
     X: np.ndarray
     Y: np.ndarray
 
-    def __init__(self, root_dir: str, transform: transforms = None,
+    def __init__(self, root_dir: str, transforms: transforms = None,
                  is_train: bool = True) -> None:
         """
         Initialize the dataset with the given directory and the transformation
 
         :param root_dir: the root directory
-        :param transform: the transformations
+        :param transforms: the transformations
         :param is_train: true if the current dataset is the training set
         """
         self.input_dir = Path(root_dir).joinpath(INPUT)
         self.mask_dir = Path(root_dir).joinpath(MASK)
         self.num_data = len([f for f in self.input_dir.iterdir()])
-        self.transform = transform
+        self.transforms = transforms
         self.is_train = is_train
 
     def __len__(self) -> int:
@@ -110,6 +111,15 @@ class CatDataset(Dataset):
         label = np.zeros((2, label_img.shape[0], label_img.shape[1]))
         label[0] = (label_img != 0).astype(float)
         label[1] = (label_img == 0).astype(float)
+
+        image = torch.from_numpy(image).type(torch.float32)
+        label = torch.from_numpy(label).type(torch.float32)
+
+        if self.is_train and self.transforms:
+            pil_img = transforms.functional.to_pil_image(image)
+            pil_lbl = transforms.functional.to_pil_image(label)
+            image = self.transforms(pil_img)
+            label = self.transforms(pil_lbl)
 
         return image, label
 
