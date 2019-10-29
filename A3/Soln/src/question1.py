@@ -21,6 +21,7 @@ class AttrDict(dict):
     output_name: str
     visualize: bool
     downsize_input: bool
+    is_cat: bool
 
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
@@ -79,7 +80,8 @@ def compute_loss(criterion, outputs, labels, batch_size):
 
 
 def run_validation_step(cnn, criterion, gpu, batch_size, transforms=None):
-    test_dataset = CatDataset(TEST_PATH, transforms=transforms, is_train=False)
+    test_dataset = CatDataset(Path(CAT_DATA).joinpath(TEST),
+                              transforms=transforms, is_train=False)
     test_data_loader = DataLoader(test_dataset, batch_size=batch_size,
                                   shuffle=True)
     correct = 0.0
@@ -111,7 +113,10 @@ def run_validation_step(cnn, criterion, gpu, batch_size, transforms=None):
 
 def train(args, criterion, transforms=None, model=None):
     # Load Data
-    train_dataset = CatDataset(TRAIN_PATH, transforms=transforms, is_train=True)
+    src_dir = CAT_DATA if args.is_cat else MEMBRANE_DATA
+    train_dataset = CatDataset(str(Path(src_dir).joinpath(TRAIN)),
+                               transforms=transforms, is_train=True,
+                               is_cat=args.is_cat)
     train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                    shuffle=True)
 
@@ -192,6 +197,7 @@ def part1():
         'output_name': 'unet',
         'visualize': False,
         'downsize_input': False,
+        'is_cat': True,
     }
     args.update(args_dict)
     print("{0} Training {1} {0}".format("=" * 10, "bce"))
@@ -222,6 +228,7 @@ def part2():
         'output_name': 'unet',
         'visualize': False,
         'downsize_input': False,
+        'is_cat': True,
     }
     args.update(args_dict)
     print("{0} Loading Data {0}".format("=" * 5))
@@ -232,13 +239,55 @@ def part2():
         transforms.RandomResizedCrop(STANDARD_DIMS),
         transforms.ToTensor()
     ])
-    train(args, bce_loss, transforms=all_transforms)
+    # train(args, bce_loss, transforms=all_transforms)
     train(args, dice_loss, transforms=all_transforms)
+
+
+def part3():
+    # ==================== Load Data ====================
+    print("{0} Part 3 {0}".format("=" * 10))
+    print("{0} Loading Data {0}".format("=" * 5))
+    args = AttrDict()
+    args_dict = {
+        'gpu': True,
+        'valid': False,
+        'checkpoint': "",
+        'kernel': 3,
+        'num_filters': 64,
+        'learn_rate': 1e-3,
+        'batch_size': 5,
+        'epochs': 25,
+        'seed': 0,
+        'plot': True,
+        'output_name': 'unet',
+        'visualize': False,
+        'downsize_input': False,
+        'is_cat': False,
+    }
+    args.update(args_dict)
+    all_transforms = None
+    print("{0} Done Loading {0}".format("=" * 5))
+
+    print("{0} Training {1} {0}".format("=" * 10, "bce"))
+    trained_unet = train(args, dice_loss, transforms=None)
+    torch.save(trained_unet.state_dict(),
+               CHECKPOINT_PATH + "/1_3_dice_trained.pt")
+    print("{0} Done {0}".format("=" * 10))
+
+    pretrained_unet = UNet(num_channels=1, num_classes=2, num_filters=64)
+    pretrained_unet.load_state_dict(
+        torch.load(CHECKPOINT_PATH + "/1_3_dice_trained.pt"))
+    pretrained_unet.eval()
+
+    pretrained_unet.out_conv = nn.Conv2d(64, 2, 1)
+
+    train(args, dice_loss, transforms=None, model=pretrained_unet)
 
 
 def main():
     part1()
     part2()
+    part3()
 
 
 if __name__ == '__main__':

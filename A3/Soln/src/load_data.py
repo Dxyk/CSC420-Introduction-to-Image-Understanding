@@ -10,26 +10,46 @@ from torchvision import transforms
 from torchvision.transforms import functional
 
 # ==================== CONSTANTS ====================
-TRAIN_PATH = "./cat_data/Train/"
-TEST_PATH = "./cat_data/Test/"
 CHECKPOINT_PATH = "./Checkpoints/"
-IMAGE_NAME = "cat.{}.jpg"
-LABEL_NAME = "mask_cat.{}.jpg"
+TRAIN = "Train"
+TEST = "Test"
 INPUT = "input"
 MASK = "mask"
+CAT_DATA = "../cat_data"
+CAT_IMAGE_NAME = "cat.{}.jpg"
+CAT_MASK_NAME = "mask_cat.{}.jpg"
+MEMBRANE_DATA = "../membrane"
+MEMBRANE_IMAGE_NAME = "{}.png"
 # H x W x C
 STANDARD_DIMS = (128, 128)
 
 
-def resize_data() -> None:
+def process_membrane(data_path: str) -> None:
+    test_path = Path(data_path).joinpath(TEST)
+    test_input_path = test_path.joinpath(INPUT)
+    test_mask_path = test_path.joinpath(MASK)
+    test_input_path.mkdir(parents=True, exist_ok=True)
+    test_mask_path.mkdir(parents=True, exist_ok=True)
+
+    for img_path in test_path.iterdir():
+        # membrane remove _predict
+        if str(img_path).endswith("_predict.png"):
+            img_path.replace(test_mask_path.joinpath(img_path.name))
+        elif str(img_path).endswith("png"):
+            img_path.replace(test_input_path.joinpath(img_path.name))
+
+
+def resize_data(data_path: str) -> None:
     """
     Resize all the cat data to 128 * 128
 
     :return: None
     """
     print("{0} Start Processing {0}".format("=" * 10))
-    paths = [Path(TRAIN_PATH).joinpath(INPUT), Path(TRAIN_PATH).joinpath(MASK),
-             Path(TEST_PATH).joinpath(INPUT), Path(TEST_PATH).joinpath(MASK)]
+    paths = [Path(data_path).joinpath(TRAIN).joinpath(INPUT),
+             Path(data_path).joinpath(TRAIN).joinpath(MASK),
+             Path(data_path).joinpath(TEST).joinpath(INPUT),
+             Path(data_path).joinpath(TEST).joinpath(MASK)]
     for curr_dir in paths:
         print("{0} processing {1} {0}".format("=" * 5, curr_dir))
         if curr_dir.is_dir():
@@ -66,7 +86,7 @@ class CatDataset(Dataset):
     Y: np.ndarray
 
     def __init__(self, root_dir: str, transforms: transforms = None,
-                 is_train: bool = True) -> None:
+                 is_train: bool = True, is_cat: bool = True) -> None:
         """
         Initialize the dataset with the given directory and the transformation
 
@@ -79,6 +99,7 @@ class CatDataset(Dataset):
         self.num_data = len([f for f in self.input_dir.iterdir()])
         self.transforms = transforms
         self.is_train = is_train
+        self.is_cat = is_cat
 
     def __len__(self) -> int:
         """
@@ -98,12 +119,19 @@ class CatDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        if not self.is_train:
+        if self.is_cat and not self.is_train:
             # Test images start at index 60
             idx += 60
 
-        image_path = Path(self.input_dir).joinpath(IMAGE_NAME.format(idx))
-        label_path = Path(self.mask_dir).joinpath(LABEL_NAME.format(idx))
+        img_name = CAT_IMAGE_NAME if self.is_cat else MEMBRANE_IMAGE_NAME
+        mask_name = CAT_MASK_NAME if self.is_cat else MEMBRANE_IMAGE_NAME
+
+        image_path = Path(self.input_dir).joinpath(img_name.format(idx))
+        label_path = Path(self.mask_dir).joinpath(mask_name.format(idx))
+        if not image_path.exists():
+            raise FileNotFoundError("{} not found".format(image_path))
+        if not label_path.exists():
+            raise FileNotFoundError("{} not found".format(image_path))
         image = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
         image = image[np.newaxis, :, :].astype(float)
 
@@ -125,4 +153,7 @@ class CatDataset(Dataset):
 
 
 if __name__ == '__main__':
-    resize_data()
+    resize_data(CAT_DATA)
+
+    process_membrane(MEMBRANE_DATA)
+    resize_data(MEMBRANE_DATA)
