@@ -1,34 +1,33 @@
-import time
-
 from torch import nn
 from torch.utils.data import DataLoader
 
 from UNet import UNet
 from load_data import *
+from train_network import AttrDict, train
 
 
-class AttrDict(dict):
-    gpu: bool
-    valid: bool
-    checkpoint: str
-    kernel: int
-    num_filters: int
-    learn_rate: float
-    batch_size: int
-    epochs: int
-    seed: int
-    plot: bool
-    output_name: str
-    visualize: bool
-    downsize_input: bool
-    is_cat: bool
+def get_data_loaders(args: AttrDict, all_transforms: transforms = None) -> \
+        Tuple[DataLoader, DataLoader]:
+    """
+    Get The data loaders for the training and testing data
 
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
+    :param args: the arguments for the network
+    :param all_transforms: all the possible transformations on data
+    :return: the data loader
+    """
+    test_dataset = CatDataset(Path(args.src_dir).joinpath(TEST),
+                              all_transforms=all_transforms, is_train=False)
+    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size,
+                                  shuffle=True)
+    train_dataset = CatDataset(Path(args.src_dir.joinpath(TRAIN)),
+                               all_transforms=all_transforms, is_train=True,
+                               is_cat=args.is_cat)
+    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
+                                   shuffle=True)
+    return train_data_loader, test_data_loader
 
 
-def dice_loss(prediction, label):
+def dice_loss(prediction: Tensor, label: Tensor) -> Tensor:
     """
     The dice loss function
 
@@ -44,7 +43,7 @@ def dice_loss(prediction, label):
                 (pred_flat.sum() + lab_flat.sum() + smooth))
 
 
-def bce_loss(prediction, label):
+def bce_loss(prediction: Tensor, label: Tensor) -> Tensor:
     """
     The Binary Cross Entropy Loss
 
@@ -57,128 +56,7 @@ def bce_loss(prediction, label):
     return nn.BCELoss()(prediction_flat, label_flat)
 
 
-def compute_loss(criterion, outputs, labels, batch_size):
-    """
-    Helper function to compute the loss. Since this is a pixel-wise
-    prediction task we need to reshape the output and ground truth
-    tensors into a 2D tensor before passing it in to the loss criterion.
-    Args:
-      criterion: pytorch loss criterion
-      outputs (pytorch tensor): predicted labels from the model
-      labels (pytorch tensor): ground truth labels
-      batch_size (int): batch size used for training
-    Returns:
-      pytorch tensor for loss
-    """
-    loss_out = outputs.transpose(1, 3) \
-        .contiguous() \
-        .view([batch_size * 128 * 128, 2])
-    loss_lab = labels.transpose(1, 3) \
-        .contiguous() \
-        .view([batch_size * 128 * 128, 2])
-    return criterion(loss_out, loss_lab)
-
-
-def run_validation_step(cnn, criterion, gpu, batch_size, transforms=None):
-    test_dataset = CatDataset(Path(CAT_DATA).joinpath(TEST),
-                              transforms=transforms, is_train=False)
-    test_data_loader = DataLoader(test_dataset, batch_size=batch_size,
-                                  shuffle=True)
-    correct = 0.0
-    total = 0.0
-    losses = []
-    for i, (images, labels) in enumerate(test_data_loader):
-        if gpu:
-            images, labels = images.cuda(), labels.cuda()
-
-        outputs = cnn(images)
-
-        val_loss = compute_loss(criterion,
-                                outputs,
-                                labels,
-                                batch_size=labels.size(0))
-        losses.append(val_loss.data.item())
-
-        _, predicted = torch.max(outputs.data, 1, keepdim=True)
-        total += labels.size(0) * 128 * 128
-        torch.set_printoptions(profile="full")
-        torch.set_printoptions(profile="default")
-
-        correct += (predicted == labels.data).sum()
-
-    val_loss = np.mean(losses)
-    val_acc = 100 * correct / total
-    return val_loss, val_acc
-
-
-def train(args, criterion, transforms=None, model=None):
-    # Load Data
-    src_dir = CAT_DATA if args.is_cat else MEMBRANE_DATA
-    train_dataset = CatDataset(str(Path(src_dir).joinpath(TRAIN)),
-                               transforms=transforms, is_train=True,
-                               is_cat=args.is_cat)
-    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                   shuffle=True)
-
-    # Load Model
-    if model is None:
-        model = UNet(num_channels=1, num_classes=2, num_filters=64)
-
-    # Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learn_rate)
-
-    print("Beginning training ...")
-    if args.gpu:
-        model.cuda()
-    start = time.time()
-
-    train_losses, valid_losses, valid_accuracies = [], [], []
-    for epoch in range(1, args.epochs + 1):
-        # Training
-        model.train()
-        losses = []
-        for i, (images, labels) in enumerate(train_data_loader):
-            if args.gpu:
-                images, labels = images.cuda(), labels.cuda()
-
-            # Forward + Backward + Optimize
-            optimizer.zero_grad()
-            outputs = model(images)
-
-            loss = compute_loss(criterion,
-                                outputs,
-                                labels,
-                                batch_size=args.batch_size)
-            loss.backward()
-            optimizer.step()
-            losses.append(loss.data.item())
-
-        # Report training result
-        avg_loss = np.mean(losses)
-        train_losses.append(avg_loss)
-        time_elapsed = time.time() - start
-        print('Epoch [%d/%d], Loss: %.4f, Time (s): %d' % (
-            epoch, args.epochs, float(avg_loss), time_elapsed))
-
-        # Evaluate the model
-        model.eval()  # Change model to 'eval' mode (BN uses moving mean/var).
-        val_loss, val_acc = run_validation_step(model, criterion, args.gpu,
-                                                args.batch_size)
-
-        time_elapsed = time.time() - start
-        valid_losses.append(val_loss)
-        valid_accuracies.append(val_acc)
-        print('Epoch [%d/%d], Val Loss: %.4f, Val Acc: %.1f%%, Time(s): %d' % (
-            epoch, args.epochs, float(val_loss), val_acc, time_elapsed))
-
-    if args.checkpoint:
-        print('Saving model...')
-        torch.save(model.state_dict(), args.checkpoint)
-
-    return model
-
-
-def part1():
+def part1() -> None:
     """ Part 1 """
     print("{0} Part 1 {0}".format("=" * 10))
     # ==================== Args ====================
@@ -200,16 +78,19 @@ def part1():
         'is_cat': True,
     }
     args.update(args_dict)
+
     print("{0} Training {1} {0}".format("=" * 10, "bce"))
-    train(args, bce_loss)
+    train_data_loader, test_data_loader = get_data_loaders(args)
+    train(args, bce_loss, train_data_loader, test_data_loader)
     print("{0} Done {0}".format("=" * 10))
 
     print("{0} Training {1} {0}".format("=" * 10, "dice"))
-    train(args, dice_loss)
+    train_data_loader, test_data_loader = get_data_loaders(args)
+    train(args, dice_loss, train_data_loader, test_data_loader)
     print("{0} Done {0}".format("=" * 10))
 
 
-def part2():
+def part2() -> None:
     # ==================== Load Data ====================
     print("{0} Part 2 {0}".format("=" * 10))
     # ==================== Args ====================
@@ -239,11 +120,11 @@ def part2():
         transforms.RandomResizedCrop(STANDARD_DIMS),
         transforms.ToTensor()
     ])
-    # train(args, bce_loss, transforms=all_transforms)
-    train(args, dice_loss, transforms=all_transforms)
+    train_data_loader, test_data_loader = get_data_loaders(args, all_transforms)
+    train(args, dice_loss, train_data_loader, test_data_loader)
 
 
-def part3():
+def part3() -> None:
     # ==================== Load Data ====================
     print("{0} Part 3 {0}".format("=" * 10))
     print("{0} Loading Data {0}".format("=" * 5))
@@ -265,11 +146,11 @@ def part3():
         'is_cat': False,
     }
     args.update(args_dict)
-    all_transforms = None
     print("{0} Done Loading {0}".format("=" * 5))
 
     print("{0} Training {1} {0}".format("=" * 10, "bce"))
-    trained_unet = train(args, dice_loss, transforms=None)
+    train_data_loader, test_data_loader = get_data_loaders(args)
+    trained_unet = train(args, dice_loss, train_data_loader, test_data_loader)
     torch.save(trained_unet.state_dict(),
                CHECKPOINT_PATH + "/1_3_dice_trained.pt")
     print("{0} Done {0}".format("=" * 10))
@@ -281,7 +162,10 @@ def part3():
 
     pretrained_unet.out_conv = nn.Conv2d(64, 2, 1)
 
-    train(args, dice_loss, transforms=None, model=pretrained_unet)
+    train_data_loader, test_data_loader = get_data_loaders(args)
+
+    train(args, dice_loss, train_data_loader, test_data_loader,
+          model=pretrained_unet)
 
 
 def main():
@@ -292,4 +176,5 @@ def main():
 
 if __name__ == '__main__':
     # ==================== Main ====================
+
     main()
