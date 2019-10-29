@@ -1,8 +1,30 @@
-from torch import nn, optim
+import time
+
+from torch import nn
 from torch.utils.data import DataLoader
 
 from UNet import UNet
 from load_data import *
+
+
+class AttrDict(dict):
+    gpu: bool
+    valid: bool
+    checkpoint: str
+    kernel: int
+    num_filters: int
+    learn_rate: float
+    batch_size: int
+    epochs: int
+    seed: int
+    plot: bool
+    output_name: str
+    visualize: bool
+    downsize_input: bool
+
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 
 def dice_loss(prediction, label):
@@ -34,117 +56,174 @@ def bce_loss(prediction, label):
     return nn.BCELoss()(prediction_flat, label_flat)
 
 
-def eval_net(net, data_loader):
-    """Evaluation without the densecrf with the dice coefficient"""
-    net.eval()
-    total = 0
-    for image, label in data_loader:
-        image = torch.from_numpy(image).unsqueeze(0)
-        label = torch.from_numpy(label).unsqueeze(0)
+def compute_loss(criterion, outputs, labels, batch_size):
+    """
+    Helper function to compute the loss. Since this is a pixel-wise
+    prediction task we need to reshape the output and ground truth
+    tensors into a 2D tensor before passing it in to the loss criterion.
+    Args:
+      criterion: pytorch loss criterion
+      outputs (pytorch tensor): predicted labels from the model
+      labels (pytorch tensor): ground truth labels
+      batch_size (int): batch size used for training
+    Returns:
+      pytorch tensor for loss
+    """
+    loss_out = outputs.transpose(1, 3) \
+        .contiguous() \
+        .view([batch_size * 128 * 128, 2])
+    loss_lab = labels.transpose(1, 3) \
+        .contiguous() \
+        .view([batch_size * 128 * 128, 2])
+    return criterion(loss_out, loss_lab)
 
-        if use_gpu:
-            image = image.cuda()
-            label = label.cuda()
 
-        mask_pred = net(image)[0]
-        mask_pred = (mask_pred > 0.5).float()
+def run_validation_step(cnn, criterion, gpu, batch_size, transforms=None):
+    test_dataset = CatDataset(TEST_PATH, transforms=transforms, is_train=False)
+    test_data_loader = DataLoader(test_dataset, batch_size=batch_size,
+                                  shuffle=True)
+    correct = 0.0
+    total = 0.0
+    losses = []
+    for i, (images, labels) in enumerate(test_data_loader):
+        if gpu:
+            images, labels = images.cuda(), labels.cuda()
 
-        total += dice_loss(mask_pred, label).item()
-    return total / (len(data_loader) + 1)
+        outputs = cnn(images)
+
+        val_loss = compute_loss(criterion,
+                                outputs,
+                                labels,
+                                batch_size=labels.size(0))
+        losses.append(val_loss.data.item())
+
+        _, predicted = torch.max(outputs.data, 1, keepdim=True)
+        total += labels.size(0) * 128 * 128
+        torch.set_printoptions(profile="full")
+        torch.set_printoptions(profile="default")
+
+        correct += (predicted == labels.data).sum()
+
+    val_loss = np.mean(losses)
+    val_acc = 100 * correct / total
+    return val_loss, val_acc
 
 
-def train(criterion, train_data_loader, test_data_loader, save_model=True,
-          save_name=""):
-    unet_model = UNet().float()
+def train(args, criterion, transforms=None, model=None):
+    # Load Data
+    train_dataset = CatDataset(TRAIN_PATH, transforms=transforms, is_train=True)
+    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
+                                   shuffle=True)
 
-    if use_gpu:
-        unet_model = unet_model.cuda()
+    # Load Model
+    if model is None:
+        model = UNet(num_channels=1, num_classes=2, num_filters=64)
 
-    optimizer = optim.Adam(unet_model.parameters(), lr=alpha)
+    # Optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learn_rate)
 
-    train_losses, test_losses = [], []
-    print("{0} Training Start {0}".format("=" * 10))
-    for e in range(epochs):
-        print("{0} Epoch {1} / {2} {0}".format("=" * 5, e + 1, epochs))
-        unet_model.train()
-        running_loss = 0
-        for images, labels in train_data_loader:
-            if use_gpu:
+    print("Beginning training ...")
+    if args.gpu:
+        model.cuda()
+    start = time.time()
+
+    train_losses, valid_losses, valid_accuracies = [], [], []
+    for epoch in range(1, args.epochs + 1):
+        # Training
+        model.train()
+        losses = []
+        for i, (images, labels) in enumerate(train_data_loader):
+            if args.gpu:
                 images, labels = images.cuda(), labels.cuda()
-            prediction = unet_model(images.float())
 
-            loss = criterion(prediction, labels.float())
-            running_loss += loss.item()
-
+            # Forward + Backward + Optimize
             optimizer.zero_grad()
+            outputs = model(images)
+
+            loss = compute_loss(criterion,
+                                outputs,
+                                labels,
+                                batch_size=args.batch_size)
             loss.backward()
             optimizer.step()
-        else:
-            print("{0} Results {0}".format("=" * 5))
+            losses.append(loss.data.item())
 
-            val_dice = eval_net(unet_model, test_data_loader)
-            print('Validation Dice Coeff: {}'.format(val_dice))
+        # Report training result
+        avg_loss = np.mean(losses)
+        train_losses.append(avg_loss)
+        time_elapsed = time.time() - start
+        print('Epoch [%d/%d], Loss: %.4f, Time (s): %d' % (
+            epoch, args.epochs, float(avg_loss), time_elapsed))
 
-            test_loss = 0
-            accuracy = 0
-            # Turn off gradients for validation, saves memory and computations
-            with torch.no_grad():
-                for images, labels in test_data_loader:
-                    images = images.type(torch.FloatTensor)
-                    labels = labels.type(torch.FloatTensor)
-                    if use_gpu:
-                        images, labels = images.cuda(), labels.cuda()
-                    log_ps = unet_model(images)
-                    test_loss += criterion(log_ps, labels)
-                    # todo: accuracy doesn' look right
+        # Evaluate the model
+        model.eval()  # Change model to 'eval' mode (BN uses moving mean/var).
+        val_loss, val_acc = run_validation_step(model, criterion, args.gpu,
+                                                args.batch_size)
 
-                    # ps = torch.exp(log_ps)
-                    top_p, top_class = log_ps.topk(1, dim=1)
-                    print(top_class.shape)
-                    labeled = labels[:, 0, :, :]
-                    equals = labeled.view(*top_class.shape)
-                    accuracy += torch.mean(equals.type(torch.FloatTensor))
+        time_elapsed = time.time() - start
+        valid_losses.append(val_loss)
+        valid_accuracies.append(val_acc)
+        print('Epoch [%d/%d], Val Loss: %.4f, Val Acc: %.1f%%, Time(s): %d' % (
+            epoch, args.epochs, float(val_loss), val_acc, time_elapsed))
 
-            train_losses.append(running_loss / len(train_data_loader))
-            test_losses.append(test_loss / len(test_data_loader))
+    if args.checkpoint:
+        print('Saving model...')
+        torch.save(model.state_dict(), args.checkpoint)
 
-            print("Training Loss: {:.3f}.. ".format(
-                running_loss / len(train_data_loader)))
-            print("Test Loss: {:.3f}.. ".format(
-                test_loss / len(test_data_loader)))
-            print("Test Accuracy: {:.3f}".format(
-                accuracy / len(test_data_loader)))
-            print("Training loss: {}".format(
-                running_loss / len(train_data_loader)))
-
-        if save_model:
-            criterion_name = "BCE" if criterion == bce_loss else "Dice"
-            target_path = Path(CHECKPOINT_PATH).joinpath(
-                'CP_{}_{}_{}.pth'.format(save_name, criterion_name, e + 1))
-            torch.save(unet_model.state_dict(), str(target_path))
-            print('Checkpoint {}_{} saved !'.format(save_name, criterion_name,
-                                                    e + 1))
+    return model
 
 
 def part1():
     """ Part 1 """
-    # ==================== Load Data ====================
     print("{0} Part 1 {0}".format("=" * 10))
-    print("{0} Loading Data {0}".format("=" * 5))
-    train_dataset = CatDataset(TRAIN_PATH, is_train=True)
-    test_dataset = CatDataset(TEST_PATH, is_train=False)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size,
-                                   shuffle=True)
-    test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
-    print("{0} Done Loading {0}".format("=" * 5))
+    # ==================== Args ====================
+    args = AttrDict()
+    args_dict = {
+        'gpu': False,
+        'valid': False,
+        'checkpoint': "",
+        'kernel': 3,
+        'num_filters': 64,
+        'learn_rate': 1e-3,
+        'batch_size': 5,
+        'epochs': 25,
+        'seed': 0,
+        'plot': True,
+        'output_name': 'unet',
+        'visualize': False,
+        'downsize_input': False,
+    }
+    args.update(args_dict)
+    print("{0} Training {1} {0}".format("=" * 10, "bce"))
+    train(args, bce_loss)
+    print("{0} Done {0}".format("=" * 10))
 
-    train(bce_loss, train_data_loader, test_data_loader, save_name="q1")
-    train(dice_loss, train_data_loader, test_data_loader, save_name="q1")
+    print("{0} Training {1} {0}".format("=" * 10, "dice"))
+    train(args, dice_loss)
+    print("{0} Done {0}".format("=" * 10))
 
 
 def part2():
     # ==================== Load Data ====================
     print("{0} Part 2 {0}".format("=" * 10))
+    # ==================== Args ====================
+    args = AttrDict()
+    args_dict = {
+        'gpu': False,
+        'valid': False,
+        'checkpoint': "",
+        'kernel': 3,
+        'num_filters': 64,
+        'learn_rate': 1e-3,
+        'batch_size': 5,
+        'epochs': 25,
+        'seed': 0,
+        'plot': True,
+        'output_name': 'unet',
+        'visualize': False,
+        'downsize_input': False,
+    }
+    args.update(args_dict)
     print("{0} Loading Data {0}".format("=" * 5))
     all_transforms = transforms.Compose([
         transforms.RandomHorizontalFlip(),
@@ -153,18 +232,8 @@ def part2():
         transforms.RandomResizedCrop(STANDARD_DIMS),
         transforms.ToTensor()
     ])
-
-    train_dataset = CatDataset(TRAIN_PATH, transforms=all_transforms,
-                               is_train=True)
-    test_dataset = CatDataset(TEST_PATH, transforms=all_transforms,
-                              is_train=False)
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size,
-                                   shuffle=True)
-    test_data_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
-    print("{0} Done Loading {0}".format("=" * 5))
-
-    train(bce_loss, train_data_loader, test_data_loader, save_name="q2")
-    train(dice_loss, train_data_loader, test_data_loader, save_name="q2")
+    train(args, bce_loss, transforms=all_transforms)
+    train(args, dice_loss, transforms=all_transforms)
 
 
 def main():
@@ -173,12 +242,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # ==================== Hyper-Parameters ====================
-    epochs = 15
-    # set to true in colab
-    use_gpu = False
-    batch_size = 3
-    alpha = 3 * 1e-4
-
     # ==================== Main ====================
     main()
