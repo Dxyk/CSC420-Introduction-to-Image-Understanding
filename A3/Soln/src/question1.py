@@ -15,18 +15,22 @@ def get_data_loaders(args: AttrDict, all_transforms: transforms = None) -> \
     :param all_transforms: all the possible transformations on data
     :return: the data loader
     """
+    train_dataset = CatDataset(Path(args.src_dir).joinpath(TRAIN),
+                               all_transforms=all_transforms,
+                               is_train=True,
+                               sample_type=args.sample_type)
     test_dataset = CatDataset(Path(args.src_dir).joinpath(TEST),
-                              all_transforms=all_transforms, is_train=False)
-    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size,
-                                  shuffle=True)
-    train_dataset = CatDataset(Path(args.src_dir.joinpath(TRAIN)),
-                               all_transforms=all_transforms, is_train=True,
-                               is_cat=args.is_cat)
+                              all_transforms=all_transforms,
+                              is_train=False,
+                              sample_type=args.sample_type)
     train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                    shuffle=True)
+    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size,
+                                  shuffle=True)
     return train_data_loader, test_data_loader
 
 
+# ==================== Loss Functions ====================
 def dice_loss(prediction: Tensor, label: Tensor) -> Tensor:
     """
     The dice loss function
@@ -56,63 +60,61 @@ def bce_loss(prediction: Tensor, label: Tensor) -> Tensor:
     return nn.BCELoss()(prediction_flat, label_flat)
 
 
+# ==================== Part 1 ====================
 def part1() -> None:
     """ Part 1 """
     print("{0} Part 1 {0}".format("=" * 10))
-    # ==================== Args ====================
+    # =============== Args ===============
     args = AttrDict()
     args_dict = {
-        'gpu': False,
-        'valid': False,
-        'checkpoint': "",
+        'src_dir': CAT_DATA,
         'kernel': 3,
         'num_filters': 64,
         'learn_rate': 1e-3,
         'batch_size': 5,
         'epochs': 25,
-        'seed': 0,
-        'plot': True,
         'output_name': 'unet',
-        'visualize': False,
-        'downsize_input': False,
-        'is_cat': True,
+        'sample_type': 'cat',
     }
     args.update(args_dict)
 
-    print("{0} Training {1} {0}".format("=" * 10, "bce"))
+    # =============== Train with BCE ===============
+    print("{0} Training {1} {0}".format("=" * 5, "bce"))
     train_data_loader, test_data_loader = get_data_loaders(args)
-    train(args, bce_loss, train_data_loader, test_data_loader)
-    print("{0} Done {0}".format("=" * 10))
+    args.checkpoint = CHECKPOINT_PATH + "1_1_bce.pt"
+    trained_network = train(args, bce_loss, train_data_loader, test_data_loader)
+    print("{0} Done {0}".format("=" * 5))
 
-    print("{0} Training {1} {0}".format("=" * 10, "dice"))
+    # =============== Train with Dice ===============
+    print("{0} Training {1} {0}".format("=" * 5, "dice"))
     train_data_loader, test_data_loader = get_data_loaders(args)
-    train(args, dice_loss, train_data_loader, test_data_loader)
-    print("{0} Done {0}".format("=" * 10))
+    args.checkpoint = CHECKPOINT_PATH + "1_1_dice.pt"
+    trained_network = train(args, dice_loss, train_data_loader,
+                            test_data_loader)
+    print("{0} Done {0}".format("=" * 5))
+
+    print("{0} Part 1 Done {0}".format("=" * 10))
 
 
+# ==================== Part 2 ====================
 def part2() -> None:
-    # ==================== Load Data ====================
+    """ Part 2 """
     print("{0} Part 2 {0}".format("=" * 10))
-    # ==================== Args ====================
+    # =============== Args ===============
     args = AttrDict()
     args_dict = {
-        'gpu': False,
-        'valid': False,
-        'checkpoint': "",
+        'src_dir': CAT_DATA,
         'kernel': 3,
         'num_filters': 64,
         'learn_rate': 1e-3,
         'batch_size': 5,
         'epochs': 25,
-        'seed': 0,
-        'plot': True,
         'output_name': 'unet',
-        'visualize': False,
-        'downsize_input': False,
-        'is_cat': True,
+        'sample_type': 'cat',
     }
     args.update(args_dict)
-    print("{0} Loading Data {0}".format("=" * 5))
+
+    # =============== Transforms ===============
     all_transforms = transforms.Compose([
         transforms.RandomHorizontalFlip(),
         transforms.RandomVerticalFlip(),
@@ -120,55 +122,75 @@ def part2() -> None:
         transforms.RandomResizedCrop(STANDARD_DIMS),
         transforms.ToTensor()
     ])
-    train_data_loader, test_data_loader = get_data_loaders(args, all_transforms)
-    train(args, dice_loss, train_data_loader, test_data_loader)
+
+    # =============== Train with Dice ===============
+    print("{0} Training {1} {0}".format("=" * 5, "dice"))
+    train_data_loader, test_data_loader = \
+        get_data_loaders(args, all_transforms=all_transforms)
+    args.checkpoint = CHECKPOINT_PATH + "1_2_dice_transforms.pt"
+
+    trained_network = train(args, dice_loss, train_data_loader,
+                            test_data_loader)
+    print("{0} Done {0}".format("=" * 5))
+
+    print("{0} Part 2 Done {0}".format("=" * 10))
 
 
+# ==================== Part 3 ====================
 def part3() -> None:
-    # ==================== Load Data ====================
+    """ Part 3 """
     print("{0} Part 3 {0}".format("=" * 10))
-    print("{0} Loading Data {0}".format("=" * 5))
+    # =============== Args ===============
     args = AttrDict()
     args_dict = {
-        'gpu': True,
-        'valid': False,
-        'checkpoint': "",
+        'src_dir': MEMBRANE_DATA,
         'kernel': 3,
         'num_filters': 64,
         'learn_rate': 1e-3,
         'batch_size': 5,
         'epochs': 25,
         'seed': 0,
-        'plot': True,
         'output_name': 'unet',
-        'visualize': False,
-        'downsize_input': False,
-        'is_cat': False,
+        'sample_type': 'membrane',
     }
     args.update(args_dict)
-    print("{0} Done Loading {0}".format("=" * 5))
 
-    print("{0} Training {1} {0}".format("=" * 10, "bce"))
+    # =============== Training on Membrane with Dice ===============
+    print("{0} Training {1} {0}".format("=" * 10, "membrane"))
     train_data_loader, test_data_loader = get_data_loaders(args)
+    args.checkpoint = CHECKPOINT_PATH + "1_3_dice_membrane.pt"
     trained_unet = train(args, dice_loss, train_data_loader, test_data_loader)
-    torch.save(trained_unet.state_dict(),
-               CHECKPOINT_PATH + "/1_3_dice_trained.pt")
     print("{0} Done {0}".format("=" * 10))
 
-    pretrained_unet = UNet(num_channels=1, num_classes=2, num_filters=64)
-    pretrained_unet.load_state_dict(
-        torch.load(CHECKPOINT_PATH + "/1_3_dice_trained.pt"))
-    pretrained_unet.eval()
+    # =============== Load pre-trained model ===============
+    print("{0} Loading Pre-trained {0}".format("=" * 10))
+    pre_trained_unet = UNet(num_channels=1, num_classes=2, num_filters=64)
+    loaded_weights = torch.load(CHECKPOINT_PATH +
+                                "/1_3_dice_membrane.pt")
+    pre_trained_unet.load_state_dict(loaded_weights)
+    pre_trained_unet.eval()
+    print("{0} Done {0}".format("=" * 10))
 
-    pretrained_unet.out_conv = nn.Conv2d(64, 2, 1)
+    # TODO: set this to middle layer
+    # reset the necessary layers
+    pre_trained_unet.out_conv = nn.Conv2d(64, 2, 1)
 
+    # =============== Training on pre-trained on Cat with Dice ===============
+    print("{0} Training {1} {0}".format("=" * 10, "cat"))
     train_data_loader, test_data_loader = get_data_loaders(args)
+    args.sample_type = 'cat'
+    args.src_dir = CAT_DATA
+    args.checkpoint = CHECKPOINT_PATH + "1_3_dice_cat.pt"
 
-    train(args, dice_loss, train_data_loader, test_data_loader,
-          model=pretrained_unet)
+    trained_network = train(args, dice_loss, train_data_loader,
+                            test_data_loader, model=pre_trained_unet)
+    print("{0} Done {0}".format("=" * 10))
+
+    print("{0} Part 3 Done {0}".format("=" * 10))
 
 
-def main():
+def main() -> None:
+    """ Main """
     part1()
     part2()
     part3()

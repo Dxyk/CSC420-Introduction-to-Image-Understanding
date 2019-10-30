@@ -16,10 +16,9 @@ TEST = "Test"
 INPUT = "input"
 MASK = "mask"
 CAT_DATA = "../cat_data"
-CAT_IMAGE_NAME = "cat.{}.jpg"
-CAT_MASK_NAME = "mask_cat.{}.jpg"
 MEMBRANE_DATA = "../membrane"
-MEMBRANE_IMAGE_NAME = "{}.png"
+CAT_NAME = "{}.jpg"
+MEMBRANE_NAME = "{}.png"
 # H x W x C
 STANDARD_DIMS = (128, 128)
 
@@ -34,24 +33,24 @@ class CatDataset(Dataset):
     num_data: int
     all_transforms: transforms
     is_train: bool
-    data_type: str
+    sample_type: str
 
     def __init__(self, root_dir: str, all_transforms: transforms = None,
-                 is_train: bool = True, data_type: str = "cat") -> None:
+                 is_train: bool = True, sample_type: str = "cat") -> None:
         """
         Initialize the dataset with the given directory and the transformation
 
         :param root_dir: the root directory
         :param all_transforms: the transformations
         :param is_train: true if the current dataset is the training set
-        :param data_type: the type of input data. Either "cat" or "membrane"
+        :param sample_type: the type of input data. Either "cat" or "membrane"
         """
         self.input_dir = Path(root_dir).joinpath(INPUT)
         self.mask_dir = Path(root_dir).joinpath(MASK)
         self.num_data = len([f for f in self.input_dir.iterdir()])
         self.all_transforms = all_transforms
         self.is_train = is_train
-        self.data_type = data_type
+        self.sample_type = sample_type
 
     def __len__(self) -> int:
         """
@@ -72,11 +71,10 @@ class CatDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        img_name = CAT_IMAGE_NAME if self.data_type == "cat" else MEMBRANE_IMAGE_NAME
-        mask_name = CAT_MASK_NAME if self.data_type == "cat" else MEMBRANE_IMAGE_NAME
+        img_name = CAT_NAME if self.sample_type == "cat" else MEMBRANE_NAME
 
         image_path = Path(self.input_dir).joinpath(img_name.format(idx))
-        label_path = Path(self.mask_dir).joinpath(mask_name.format(idx))
+        label_path = Path(self.mask_dir).joinpath(img_name.format(idx))
         if not image_path.exists():
             raise FileNotFoundError("{} not found".format(image_path))
         if not label_path.exists():
@@ -86,7 +84,9 @@ class CatDataset(Dataset):
 
         label_img = cv2.imread(str(label_path), cv2.IMREAD_GRAYSCALE)
         label = np.zeros((2, label_img.shape[0], label_img.shape[1]))
+        # activated
         label[0] = (label_img != 0).astype(float)
+        # dark
         label[1] = (label_img == 0).astype(float)
 
         image = torch.from_numpy(image).type(torch.float32)
@@ -101,23 +101,31 @@ class CatDataset(Dataset):
         return image, label
 
 
-def process_membrane(data_path: str) -> None:
-    test_path = Path(data_path).joinpath(TEST)
-    test_input_path = test_path.joinpath(INPUT)
-    test_mask_path = test_path.joinpath(MASK)
-    test_input_path.mkdir(parents=True, exist_ok=True)
-    test_mask_path.mkdir(parents=True, exist_ok=True)
+def process_membrane() -> None:
+    print("{0} Start Processing MEMBRANE {0}".format("=" * 10))
+    data_path = Path(MEMBRANE_DATA)
+    if not data_path.exists() or not data_path.is_dir():
+        raise FileNotFoundError("membrane directory does not exist")
+    train_dir_path = data_path.joinpath(TRAIN)
+    test_dir_path = data_path.joinpath(TEST)
+    input_dirs = [train_dir_path.joinpath(INPUT), test_dir_path.joinpath(INPUT),
+                  train_dir_path.joinpath(MASK), test_dir_path.joinpath(MASK)]
+    for curr_dir in input_dirs:
+        for img_path in curr_dir.iterdir():
+            if img_path.suffix == ".png":
+                if curr_dir.resolve().parents[0].name == TEST and \
+                        curr_dir.name == MASK and "_predict" in img_path.name:
+                    img_name = img_path.name[
+                               :-len("_predict.png")] + img_path.suffix
+                    img_path.rename(curr_dir.joinpath(img_name))
+                    img_path = curr_dir.joinpath(img_name)
 
-    for img_path in test_path.iterdir():
-        # membrane remove _predict
-        if str(img_path).endswith("_predict.png"):
-            img_path.replace(test_mask_path.joinpath(img_path.name))
-        elif str(img_path).endswith("png"):
-            img_path.replace(test_input_path.joinpath(img_path.name))
+                _resize_img(img_path)
+    print("{0} Done Processing MEMBRANE {0}".format("=" * 10))
 
 
 def process_cat() -> None:
-    print("{0} Start Processing {0}".format("=" * 10))
+    print("{0} Start Processing CAT {0}".format("=" * 10))
     data_path = Path(CAT_DATA)
     if not data_path.exists() or not data_path.is_dir():
         raise FileNotFoundError("cat_data directory does not exist")
@@ -144,12 +152,12 @@ def process_cat() -> None:
                     img_path.rename(curr_dir.joinpath(new_name))
                     img_path = curr_dir.joinpath(new_name)
 
-                resize_img(img_path)
+                _resize_img(img_path)
 
     print("{0} Done Processing CAT {0}".format("=" * 10))
 
 
-def resize_img(img_path):
+def _resize_img(img_path):
     curr_img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
     if curr_img is not None:
         if curr_img.shape != STANDARD_DIMS:
@@ -161,43 +169,6 @@ def resize_img(img_path):
               "as an image".format(img_path))
 
 
-def resize_data(data_path: str) -> None:
-    """
-    Resize all the cat data to 128 * 128
-
-    :return: None
-    """
-    print("{0} Start Processing {0}".format("=" * 10))
-    paths = [Path(data_path).joinpath(TRAIN).joinpath(INPUT),
-             Path(data_path).joinpath(TRAIN).joinpath(MASK),
-             Path(data_path).joinpath(TEST).joinpath(INPUT),
-             Path(data_path).joinpath(TEST).joinpath(MASK)]
-    for curr_dir in paths:
-        print("{0} processing {1} {0}".format("=" * 5, curr_dir))
-        if curr_dir.is_dir():
-            for img_path in curr_dir.iterdir():
-                # remove .DS_Store
-                if str(img_path).endswith(".DS_Store"):
-                    img_path.unlink()
-                else:
-                    curr_img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
-                    if curr_img is not None:
-                        if curr_img.shape != STANDARD_DIMS:
-                            print("Resizing {0}".format(img_path))
-                            resized_img = cv2.resize(curr_img, STANDARD_DIMS)
-                            cv2.imwrite(str(img_path), resized_img)
-                    else:
-                        print("WARNING: couldn't open {} "
-                              "as an image".format(img_path))
-        else:
-            raise FileNotFoundError("{0} is not a directory".format(curr_dir))
-
-    print("{0} Done Processing {0}".format("=" * 10))
-
-
 if __name__ == '__main__':
-    # resize_data(CAT_DATA)
-    #
-    # process_membrane(MEMBRANE_DATA)
-    # resize_data(MEMBRANE_DATA)
     process_cat()
+    process_membrane()
