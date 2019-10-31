@@ -131,10 +131,20 @@
 	%=========================================================
 	\begin{homeworkProblem}
 		
-        See \textit{question\_1.py} for implementation.
+        See \textit{question\_1.py} for the main functions for this problem.
         
-        \begin{homeworkSection}{1}
-            content...
+        \begin{homeworkSection}{1. Implement U-NET}
+            
+            The U-Net is implemented in $UNet.py$. 
+            
+            The structure of the U-Net follows the one defined in the paper by \textbf{Ronnenberger et. al}. It takes input of size of $(B, C, H, W)$, where $B$ is the the batch size, $C$ is the number of channels (1 for this assignment), and $H, W$ are the height and width of the image ($128 \times 128$ for this assignment)
+            
+            Each down-convolution consists of 2 operations of [convolution with  64 filters, batch norm, ReLU], and down-sampling by factor of 2. 
+            
+            Each up-convolution consists of up-sampling by factor of 2, concatenating with the corresponding down-convolution result, and 2 operations of [convolution with  64 filters, batch norm, ReLU].
+            
+            After training on the image, the model is tested against the test set using Dice coefficient: $\frac{2 |X \cap Y|}{|X| + |Y|}$
+            
         \end{homeworkSection}
         
         
