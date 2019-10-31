@@ -29,6 +29,7 @@ MEMBRANE_NAME = "{}.png"
 STANDARD_DIMS = (128, 128)
 
 
+# ==================== Process/Resize Image ====================
 def process_membrane() -> None:
     print("{0} Start Processing MEMBRANE {0}".format("=" * 10))
     data_path = Path(MEMBRANE_DATA)
@@ -97,6 +98,7 @@ def _resize_img(img_path):
               "as an image".format(img_path))
 
 
+# ==================== Attributes ====================
 class AttrDict(dict):
     """
     A wrapper class for dictionary defining the attributes of the network
@@ -133,6 +135,7 @@ class AttrDict(dict):
         })
 
 
+# ==================== Custom Dataset ====================
 class CatDataset(Dataset):
     """
     Custom dataset for Cat Data
@@ -223,6 +226,31 @@ class CatDataset(Dataset):
         return image, label
 
 
+def get_data_loaders(args: AttrDict, augment: bool = False) -> \
+        Tuple[DataLoader, DataLoader]:
+    """
+    Get The data loaders for the training and testing data
+
+    :param args: the arguments for the network
+    :param augment: true if augment
+    :return: the data loader
+    """
+    train_dataset = CatDataset(Path(args.src_dir).joinpath(TRAIN),
+                               augment=augment,
+                               is_train=True,
+                               sample_type=args.sample_type)
+    test_dataset = CatDataset(Path(args.src_dir).joinpath(TEST),
+                              augment=augment,
+                              is_train=False,
+                              sample_type=args.sample_type)
+    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
+                                   shuffle=True)
+    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size,
+                                  shuffle=True)
+    return train_data_loader, test_data_loader
+
+
+# ==================== Augmentation Functions ====================
 def horizontal_flip(img: np.ndarray) -> np.ndarray:
     return np.flip(img, 2)
 
@@ -255,31 +283,6 @@ def noise_img(img: np.ndarray) -> np.ndarray:
     noisy = img_cpy + gauss
     noisy = np.multiply(noisy, 255.)
     return noisy
-
-
-# dataloader
-def get_data_loaders(args: AttrDict, augment: bool = False) -> \
-        Tuple[DataLoader, DataLoader]:
-    """
-    Get The data loaders for the training and testing data
-
-    :param args: the arguments for the network
-    :param augment: true if augment
-    :return: the data loader
-    """
-    train_dataset = CatDataset(Path(args.src_dir).joinpath(TRAIN),
-                               augment=augment,
-                               is_train=True,
-                               sample_type=args.sample_type)
-    test_dataset = CatDataset(Path(args.src_dir).joinpath(TEST),
-                              augment=augment,
-                              is_train=False,
-                              sample_type=args.sample_type)
-    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                   shuffle=True)
-    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size,
-                                  shuffle=True)
-    return train_data_loader, test_data_loader
 
 
 # ==================== Loss Functions ====================
@@ -621,33 +624,53 @@ def part3() -> None:
 
 def part4():
     """ Part 4 """
+    # =============== Args ===============
     args = AttrDict()
     args_dict = {
-        'src_dir': MEMBRANE_DATA,
+        'src_dir': CAT_DATA,
         'kernel': 3,
         'num_filters': 64,
         'learn_rate': 1e-3,
         'batch_size': 5,
-        'epochs': 25,
+        'epochs': 20,
         'seed': 0,
         'output_name': 'unet',
-        'sample_type': 'membrane',
+        'sample_type': 'cat',
     }
     args.update(args_dict)
 
-    train_data_loader, test_data_loader = get_data_loaders(args)
-    images, labels = next(iter(test_data_loader))
-
+    # loads the network
     trained_network = UNet(num_channels=1, num_classes=2, num_filters=64)
     loaded_weights = torch.load(CHECKPOINT_PATH + "1_3_dice_cat.pt")
     trained_network.load_state_dict(loaded_weights)
+    trained_network.cuda()
     trained_network.eval()
+    print("loaded network")
 
-    pred = trained_network(images[:1].cuda())
+    # test for network
+    train_data_loader, test_data_loader = get_data_loaders(args)
 
-    f, axarr = plt.subplots(1, 2)
-    axarr[0].imshow(images[0][0], cmap="gray")
-    axarr[1].imshow(pred[0][0], cmap="gray")
+    for i in range(20):
+        img_color = cv2.imread(
+            CAT_DATA + "/" + TEST + "/" + INPUT + "/" + CAT_NAME.format(i))
+        img_gray = np.copy(img_color)
+        img_gray = cv2.cvtColor(img_gray, cv2.COLOR_RGB2GRAY)
+        img_tensor = torch.from_numpy(img_gray[np.newaxis, np.newaxis, :, :])
+        img_tensor = img_tensor.float()
+
+        # predict
+        pred = trained_network(img_tensor.cuda())
+
+        np_pred = pred.cpu().detach().numpy()[0][0]
+        np_pred = np.uint8(np_pred * 255.)
+
+        # find contours
+        retval, dst = cv2.threshold(np_pred, 255 / 2, 255, 0)
+        _, contours, _ = cv2.findContours(dst, cv2.RETR_TREE,
+                                          cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(img_color, contours, -1, (0, 255, 0), 2)
+        # plt.imshow(img_color)
+        plt.imsave(EVAL_PATH + "1_4_{}.png".format(i), img_color)
 
 
 def main() -> None:
@@ -655,9 +678,12 @@ def main() -> None:
     part1()
     part2()
     part3()
+    part4()
 
 
 if __name__ == '__main__':
-    # ==================== Main ====================
+    # process_membrane()
+    # process_cat()
 
+    # ==================== Main ====================
     main()
