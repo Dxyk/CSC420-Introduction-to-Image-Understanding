@@ -21,8 +21,8 @@ TRAIN = "Train"
 TEST = "Test"
 INPUT = "input"
 MASK = "mask"
-CAT_DATA = "../cat_data"
-MEMBRANE_DATA = "../membrane"
+CAT_DATA = "./cat_data"
+MEMBRANE_DATA = "./membrane"
 CAT_NAME = "{}.jpg"
 MEMBRANE_NAME = "{}.png"
 # H x W x C
@@ -121,7 +121,7 @@ class AttrDict(dict):
         # The defaults
         self.update({
             'src_dir': CAT_DATA,
-            'gpu': True,
+            'gpu': False,
             'checkpoint': "",
             'kernel': 3,
             'num_filters': 64,
