@@ -413,11 +413,10 @@ def run_validation_step(cnn, criterion, gpu, test_data_loader):
         losses.append(val_loss.data.item())
 
         predicted = torch.argmax(outputs.data, 1, keepdim=True)
-        total += labels.size(0) * 128 * 128
-        torch.set_printoptions(profile="full")
-        torch.set_printoptions(profile="default")
+        total += outputs.numel()
 
-        correct += (predicted == labels.data).sum()
+        output_class = (outputs > 0.5).float()
+        correct += (output_class == labels).float().sum()
 
     val_loss = np.mean(losses)
     # TODO: val always 100??
@@ -439,6 +438,7 @@ def report_model(args: AttrDict, plot_name: str) -> None:
 
     losses = []
     i = 0
+    total = correct = 0
     for images, labels in test_loader:
         if i == 11:
             plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
@@ -451,6 +451,11 @@ def report_model(args: AttrDict, plot_name: str) -> None:
         loss = compute_loss(dice_loss, pred, labels, batch_size=1)
         losses.append(loss.detach().numpy())
         np_pred = pred.detach().numpy()
+
+        total += pred.numel()
+
+        output_class = (pred > 0.5).float()
+        correct += (output_class == labels).float().sum()
 
         axarr[i, 0].imshow(images[0][0], cmap="gray")
         axarr[i, 1].imshow(labels[0][0], cmap="gray")
