@@ -1,6 +1,31 @@
 import torch.nn as nn
 
 
+class TestNN(nn.Module):
+    def __init__(self, n_channels=8, out_class=3, img_size=200, pool_size=2,
+                 depth=1, kernel_size=3):
+        super(TestNN, self).__init__()
+        padding = kernel_size // 2
+        self.layer = nn.Sequential(
+            nn.Conv2d(n_channels, kernel_size=(kernel_size, kernel_size),
+                      padding=padding),
+            nn.MaxPool2d(pool_size),
+            Flatten(),
+            nn.Linear(1, out_class),
+            nn.Softmax()
+        )
+
+    def forward(self, x):
+        out = self.layer(x)
+        return out
+
+
+def init_weights(m):
+    if type(m) == nn.Conv2d:
+        nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
+
 class CNN(nn.Module):
     def __init__(self, kernel, num_filters, num_classes, num_in_channels):
         super(CNN, self).__init__()
