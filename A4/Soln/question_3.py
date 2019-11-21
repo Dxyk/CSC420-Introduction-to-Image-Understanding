@@ -19,7 +19,7 @@ gray_img_3 = cv2.imread(IMAGE_DIR + IMAGE_3_NAME, cv2.IMREAD_GRAYSCALE)
 
 
 # ==================== Part a ====================
-def part_a(save_image=Tr):
+def part_a(save_image=True):
     """
     Use SIFT matching (or any other point matching technique) to find a number
     of point correspondences in the (I1, I2)​ image pair and in the (I1, I3)​
