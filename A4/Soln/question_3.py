@@ -305,9 +305,9 @@ if __name__ == '__main__':
         plt.show()
         plt.clf()
 
-    # part_a()
+    part_a(save_image=True)
 
-    F_12, F_13 = part_b()
+    # F_12, F_13 = part_b()
     # pt2 = np.hstack([kp_2_12[0], 1])
     # pt1 = np.hstack([kp_1_12[0], 1])
     # print(np.matmul(np.matmul(pt2.T, F_12), pt1))
@@ -316,11 +316,11 @@ if __name__ == '__main__':
     #
     # part_d(F_12, F_13, save_image=True)
     #
-    F_12_cv, F_13_cv = part_e()
+    # F_12_cv, F_13_cv = part_e()
     # print(np.matmul(np.matmul(pt2.T, F_12_cv), pt1))
 
     # part_f(F_12_cv, F_13_cv, save_image=True)
     #
-    if DEBUG:
-        print(f"F_12 vs F_12_cv:\n {F_12}\n {F_12_cv}")
-        print(f"F_13 vs F_13_cv:\n {F_13}\n {F_13_cv}")
+    # if DEBUG:
+    #     print(f"F_12 vs F_12_cv:\n {F_12}\n {F_12_cv}")
+    #     print(f"F_13 vs F_13_cv:\n {F_13}\n {F_13_cv}")

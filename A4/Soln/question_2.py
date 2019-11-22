@@ -17,8 +17,11 @@ f = 721.537700
 px = 609.559300
 py = 172.854000
 baseline = 0.5327119288
+# corners: (x, y) coords
 top_left = (int(bounding_box[0]), int(bounding_box[1]))
 bottom_right = (int(bounding_box[2]) + 1, int(bounding_box[3]) + 1)
+# box shape: (#row, #col)
+box_shape = (bottom_right[1] - top_left[1], bottom_right[0] - top_left[0])
 
 # ==================== Images ====================
 left_img = cv2.imread(IMAGE_DIR + LEFT_IMAGE_NAME, cv2.IMREAD_COLOR)
@@ -63,7 +66,7 @@ def NC(l_patch: np.ndarray, r_patch: np.ndarray) -> float:
     return float(np.sum(l_patch * r_patch) / norm_prod)
 
 
-def part_a() -> None:
+def part_a(save_image: bool = True) -> None:
     """
     Compute the depth for each pixel in the given bounding box of car.
 
@@ -88,17 +91,19 @@ def part_a() -> None:
 
     SSD_mask = np.zeros(left_gray_img.shape)
     SSD_depth = np.zeros(left_gray_img.shape)
+    SSD_depth_large = np.zeros(box_shape)
     NC_mask = np.zeros(left_gray_img.shape)
     NC_depth = np.zeros(left_gray_img.shape)
+    NC_depth_large = np.zeros(box_shape)
 
     # for each pixel in the bounding box in the left image, find the
     # corresponding pixel in the right image along the scanline
     for x in range(top_left[1], bottom_right[1]):
         print(f"Processing row {x} / {bottom_right[1]}")
-        for y in range(top_left[0], bottom_right[0]):
+        for ly in range(top_left[0], bottom_right[0]):
             l_patch = left_gray_img[
                       x - half_patch_size: x + half_patch_size + 1,
-                      y - half_patch_size: y + half_patch_size + 1]
+                      ly - half_patch_size: ly + half_patch_size + 1]
 
             # keep track of all computed cost/correlations along the scanline
             SSDs = np.full((right_gray_img.shape[1],), np.inf)
@@ -106,7 +111,7 @@ def part_a() -> None:
 
             # only loop where r_patch's shape will match with that of l_patch
             for ry in range(half_patch_size,
-                            min(y, right_gray_img.shape[1] - half_patch_size),
+                            min(ly, right_gray_img.shape[1] - half_patch_size),
                             step):
                 r_patch = right_gray_img[
                           x - half_patch_size: x + half_patch_size + 1,
@@ -114,28 +119,50 @@ def part_a() -> None:
                 SSDs[ry] = SSD(l_patch, r_patch)
                 NCs[ry] = NC(l_patch, r_patch)
 
-            min_SSD, min_SSD_idx = np.min(SSDs), np.argmin(SSDs)
-            max_NC, max_NC_idx = np.max(NCs), np.argmax(NCs)
+            min_SSD, SSD_ry = np.min(SSDs), np.argmin(SSDs)
+            max_NC, NC_ry = np.max(NCs), np.argmax(NCs)
 
             # Mark the corresponding location for debugging
-            SSD_mask[x, min_SSD_idx] = 255
-            NC_mask[x, max_NC_idx] = 255
+            # print((x, SSD_ry), (x, NC_ry))
+            SSD_mask[x, SSD_ry] = 255
+            NC_mask[x, NC_ry] = 255
 
             # calculate depth and map to depth matrix
-            if y - min_SSD_idx == 0:
-                SSD_depth[x, y] = 0
+            depth_x, depth_y = x - top_left[1], ly - top_left[0]
+            camera_center = right_gray_img.shape[1] // 2
+            ly_c = ly - camera_center
+            SSD_ry_c = SSD_ry - camera_center
+            NC_ry_c = NC_ry - camera_center
+            if ly_c - SSD_ry_c == 0:
+                SSD_depth[x, ly] = 0
+                SSD_depth_large[depth_x, depth_y] = 0
             else:
-                SSD_depth[x, y] = f * baseline / (y - min_SSD_idx)
-            if y - max_NC_idx == 0:
-                NC_depth[x, y] = 0
+                SSD_depth[x, ly] = f * baseline / (ly_c - SSD_ry_c)
+                SSD_depth_large[depth_x, depth_y] = f * baseline / (
+                        ly_c - SSD_ry_c)
+            if ly_c - NC_ry_c == 0:
+                NC_depth[x, ly] = 0
+                NC_depth_large[depth_x, depth_y] = 0
             else:
-                NC_depth[x, y] = f * baseline / (y - max_NC_idx)
+                NC_depth[x, ly] = f * baseline / (ly_c - NC_ry_c)
+                NC_depth_large[depth_x, depth_y] = f * baseline / (
+                        ly_c - NC_ry_c)
 
             if DEBUG:
-                print(f"SSD: {min_SSD}, SSD idx: {min_SSD_idx}, "
-                      f"depth: {SSD_depth[x, y]}")
-                print(f"NC: {max_NC}, NC idx: {max_NC_idx}, "
-                      f"depth: {NC_depth[x, y]}")
+                print(f"SSD: {min_SSD}, SSD idx: {SSD_ry}, "
+                      f"depth: {SSD_depth[x, ly]}")
+                print(f"NC: {max_NC}, NC idx: {NC_ry}, "
+                      f"depth: {NC_depth[x, ly]}")
+
+    # Convert depth maps to appropriate scale
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(SSD_depth_large)
+    SSD_depth_large -= min_val
+    SSD_depth_large = cv2.convertScaleAbs(SSD_depth_large, None,
+                                          255. / float(max_val - min_val))
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(NC_depth_large)
+    NC_depth_large -= min_val
+    NC_depth_large = cv2.convertScaleAbs(NC_depth_large, None,
+                                         255. / float(max_val - min_val))
 
     if PLOT:
         plt.clf()
@@ -145,29 +172,57 @@ def part_a() -> None:
         axes[1, 0].imshow(SSD_depth, cmap='gray')
         axes[1, 1].imshow(NC_depth, cmap='gray')
         plt.show()
+        plt.clf()
 
-    cv2.imwrite(OUT_DIR + f"{patch_size}_{step}_SSD_mask.jpg", SSD_mask)
-    cv2.imwrite(OUT_DIR + f"{patch_size}_{step}_NC_mask.jpg", NC_mask)
-    cv2.imwrite(OUT_DIR + f"{patch_size}_{step}_SSD_depth.jpg", SSD_depth)
-    cv2.imwrite(OUT_DIR + f"{patch_size}_{step}_NC_depth.jpg", NC_depth)
+        fig, axes = plt.subplots(nrows=1, ncols=2)
+        axes[0].imshow(SSD_depth_large, cmap='gray')
+        axes[1].imshow(NC_depth_large, cmap='gray')
+        plt.show()
+        plt.clf()
+
+    if save_image:
+        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_SSD_mask.jpg", SSD_mask)
+        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_NC_mask.jpg", NC_mask)
+        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_SSD_depth.jpg", SSD_depth)
+        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_NC_depth.jpg", NC_depth)
+        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_SSD_depth_large.jpg",
+                    SSD_depth_large)
+        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_NC_depth_large.jpg",
+                    NC_depth_large)
 
     print("{0} Part A End {0}".format("=" * 20))
 
 
+def part_b():
+    """
+    Model: https://github.com/ucbdrive/hd3
+    See prediction implementation in q2.ipynb
+    :return:
+    """
+    print("{0} Part A Start {0}".format("=" * 20))
+    vec_orig = cv2.imread(OUT_DIR + "b_orig_vec.jpg", cv2.IMREAD_GRAYSCALE)
+    cropped_out = vec_orig[top_left[1]:bottom_right[1],
+                  top_left[0]:bottom_right[0]]
+    cv2.imwrite(OUT_DIR + "b_cropped_vec.jpg", cropped_out)
+    print("{0} Part B End {0}".format("=" * 20))
+
+
 if __name__ == '__main__':
     PLOT = True
-    DEBUG = True
-    if PLOT and False:
-        fig, axes = plt.subplots(nrows=2, ncols=2)
-        axes[0, 0].imshow(left_img)
-        axes[0, 1].imshow(right_img)
-        axes[1, 0].imshow(left_gray_img, cmap='gray')
-        axes[1, 1].imshow(right_gray_img, cmap='gray')
+    DEBUG = False
+    # if PLOT:
+    #     fig, axes = plt.subplots(nrows=2, ncols=2)
+    #     axes[0, 0].imshow(left_img)
+    #     axes[0, 1].imshow(right_img)
+    #     axes[1, 0].imshow(left_gray_img, cmap='gray')
+    #     axes[1, 1].imshow(right_gray_img, cmap='gray')
+    #     plt.show()
+    #     plt.clf()
+    #
+    #     plt.imshow(left_rectangle_image)
+    #     plt.show()
+    #     plt.clf()
 
-        plt.show()
-        plt.clf()
-        plt.imshow(left_rectangle_image)
-        plt.show()
-        plt.clf()
+    # part_a(save_image=True)
 
-    part_a()
+    part_b()
