@@ -66,7 +66,7 @@ def NC(l_patch: np.ndarray, r_patch: np.ndarray) -> float:
     return float(np.sum(l_patch * r_patch) / norm_prod)
 
 
-def part_a(save_image: bool = True) -> None:
+def part_a(block_size: int = 3, step: int = 1, save_image: bool = True) -> None:
     """
     Compute the depth for each pixel in the given bounding box of car.
 
@@ -85,16 +85,14 @@ def part_a(save_image: bool = True) -> None:
     """
     print("{0} Part A Start {0}".format("=" * 20))
 
-    step = 3
-    patch_size = 5
-    half_patch_size = patch_size // 2
+    half_block_size = block_size // 2
 
     SSD_mask = np.zeros(left_gray_img.shape)
     SSD_depth = np.zeros(left_gray_img.shape)
-    SSD_depth_large = np.zeros(box_shape)
+    SSD_depth_crop = np.zeros(box_shape)
     NC_mask = np.zeros(left_gray_img.shape)
     NC_depth = np.zeros(left_gray_img.shape)
-    NC_depth_large = np.zeros(box_shape)
+    NC_depth_crop = np.zeros(box_shape)
 
     # for each pixel in the bounding box in the left image, find the
     # corresponding pixel in the right image along the scanline
@@ -102,20 +100,20 @@ def part_a(save_image: bool = True) -> None:
         print(f"Processing row {x} / {bottom_right[1]}")
         for ly in range(top_left[0], bottom_right[0]):
             l_patch = left_gray_img[
-                      x - half_patch_size: x + half_patch_size + 1,
-                      ly - half_patch_size: ly + half_patch_size + 1]
+                      x - half_block_size: x + half_block_size + 1,
+                      ly - half_block_size: ly + half_block_size + 1]
 
             # keep track of all computed cost/correlations along the scanline
             SSDs = np.full((right_gray_img.shape[1],), np.inf)
             NCs = np.full((right_gray_img.shape[1],), -np.inf)
 
             # only loop where r_patch's shape will match with that of l_patch
-            for ry in range(half_patch_size,
-                            min(ly, right_gray_img.shape[1] - half_patch_size),
+            for ry in range(half_block_size,
+                            min(ly, right_gray_img.shape[1] - half_block_size),
                             step):
                 r_patch = right_gray_img[
-                          x - half_patch_size: x + half_patch_size + 1,
-                          ry - half_patch_size: ry + half_patch_size + 1]
+                          x - half_block_size: x + half_block_size + 1,
+                          ry - half_block_size: ry + half_block_size + 1]
                 SSDs[ry] = SSD(l_patch, r_patch)
                 NCs[ry] = NC(l_patch, r_patch)
 
@@ -135,17 +133,17 @@ def part_a(save_image: bool = True) -> None:
             NC_ry_c = NC_ry - camera_center
             if ly_c - SSD_ry_c == 0:
                 SSD_depth[x, ly] = 0
-                SSD_depth_large[depth_x, depth_y] = 0
+                SSD_depth_crop[depth_x, depth_y] = 0
             else:
                 SSD_depth[x, ly] = f * baseline / (ly_c - SSD_ry_c)
-                SSD_depth_large[depth_x, depth_y] = f * baseline / (
+                SSD_depth_crop[depth_x, depth_y] = f * baseline / (
                         ly_c - SSD_ry_c)
             if ly_c - NC_ry_c == 0:
                 NC_depth[x, ly] = 0
-                NC_depth_large[depth_x, depth_y] = 0
+                NC_depth_crop[depth_x, depth_y] = 0
             else:
                 NC_depth[x, ly] = f * baseline / (ly_c - NC_ry_c)
-                NC_depth_large[depth_x, depth_y] = f * baseline / (
+                NC_depth_crop[depth_x, depth_y] = f * baseline / (
                         ly_c - NC_ry_c)
 
             if DEBUG:
@@ -155,14 +153,14 @@ def part_a(save_image: bool = True) -> None:
                       f"depth: {NC_depth[x, ly]}")
 
     # Convert depth maps to appropriate scale
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(SSD_depth_large)
-    SSD_depth_large -= min_val
-    SSD_depth_large = cv2.convertScaleAbs(SSD_depth_large, None,
-                                          255. / float(max_val - min_val))
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(NC_depth_large)
-    NC_depth_large -= min_val
-    NC_depth_large = cv2.convertScaleAbs(NC_depth_large, None,
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(SSD_depth_crop)
+    SSD_depth_crop -= min_val
+    SSD_depth_crop = cv2.convertScaleAbs(SSD_depth_crop, None,
                                          255. / float(max_val - min_val))
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(NC_depth_crop)
+    NC_depth_crop -= min_val
+    NC_depth_crop = cv2.convertScaleAbs(NC_depth_crop, None,
+                                        255. / float(max_val - min_val))
 
     if PLOT:
         plt.clf()
@@ -175,40 +173,62 @@ def part_a(save_image: bool = True) -> None:
         plt.clf()
 
         fig, axes = plt.subplots(nrows=1, ncols=2)
-        axes[0].imshow(SSD_depth_large, cmap='gray')
-        axes[1].imshow(NC_depth_large, cmap='gray')
+        axes[0].imshow(SSD_depth_crop, cmap='gray')
+        axes[1].imshow(NC_depth_crop, cmap='gray')
         plt.show()
         plt.clf()
 
     if save_image:
-        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_SSD_mask.jpg", SSD_mask)
-        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_NC_mask.jpg", NC_mask)
-        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_SSD_depth.jpg", SSD_depth)
-        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_NC_depth.jpg", NC_depth)
-        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_SSD_depth_large.jpg",
-                    SSD_depth_large)
-        cv2.imwrite(OUT_DIR + f"a_{patch_size}_{step}_NC_depth_large.jpg",
-                    NC_depth_large)
+        cv2.imwrite(OUT_DIR + f"a_{block_size}_{step}_SSD_mask.jpg", SSD_mask)
+        cv2.imwrite(OUT_DIR + f"a_{block_size}_{step}_NC_mask.jpg", NC_mask)
+        cv2.imwrite(OUT_DIR + f"a_{block_size}_{step}_SSD_depth.jpg", SSD_depth)
+        cv2.imwrite(OUT_DIR + f"a_{block_size}_{step}_NC_depth.jpg", NC_depth)
+        cv2.imwrite(OUT_DIR + f"a_{block_size}_{step}_SSD_depth_crop.jpg",
+                    SSD_depth_crop)
+        cv2.imwrite(OUT_DIR + f"a_{block_size}_{step}_NC_depth_crop.jpg",
+                    NC_depth_crop)
 
     print("{0} Part A End {0}".format("=" * 20))
 
 
+def stitch_images():
+    block_sizes = [1, 3, 5]
+    patch_sizes = [1, 3, 5]
+    plt.clf()
+    fig, axes = plt.subplots(nrows=9, ncols=2)
+    for i in range(len(block_sizes)):
+        for j in range(len(patch_sizes)):
+            block_size = block_sizes[i]
+            patch_size = patch_sizes[j]
+            curr_img = cv2.imread(
+                OUT_DIR + f"a_{block_size}_{patch_size}_SSD_depth_crop.jpg")
+            axes[3 * i + j][0].imshow(curr_img, cmap='gray')
+            axes[3 * i + j][0].axis('off')
+            curr_img = cv2.imread(
+                OUT_DIR + f"a_{block_size}_{patch_size}_NC_depth_crop.jpg")
+            axes[3 * i + j][1].imshow(curr_img, cmap='gray')
+            axes[3 * i + j][1].axis('off')
+
+    plt.savefig(OUT_DIR + "a_all.jpg")
+
+
+# ==================== Part b ====================
 def part_b():
     """
     Model: https://github.com/ucbdrive/hd3
     See prediction implementation in q2.ipynb
     :return:
     """
-    print("{0} Part A Start {0}".format("=" * 20))
-    vec_orig = cv2.imread(OUT_DIR + "b_orig_vec.jpg", cv2.IMREAD_GRAYSCALE)
+    print("{0} Part B Start {0}".format("=" * 20))
+    vec_orig = cv2.imread(OUT_DIR + "b_orig_vis.png", cv2.IMREAD_COLOR)
     cropped_out = vec_orig[top_left[1]:bottom_right[1],
                   top_left[0]:bottom_right[0]]
-    cv2.imwrite(OUT_DIR + "b_cropped_vec.jpg", cropped_out)
+    cv2.imwrite(OUT_DIR + "b_cropped_vis.jpg", cropped_out)
     print("{0} Part B End {0}".format("=" * 20))
 
 
 if __name__ == '__main__':
-    PLOT = True
+    PLOT = False
     DEBUG = False
     # if PLOT:
     #     fig, axes = plt.subplots(nrows=2, ncols=2)
@@ -223,6 +243,9 @@ if __name__ == '__main__':
     #     plt.show()
     #     plt.clf()
 
-    # part_a(save_image=True)
+    # for block_size in [1, 3, 5]:
+    #     for step in [1, 3, 5]:
+    #         part_a(block_size, step, save_image=True)
+    # stitch_images()
 
     part_b()

@@ -4,7 +4,7 @@ import numpy as np
 
 # ==================== Constants ====================
 OPENCV_ENABLE_NONFREE = True
-IMAGE_DIR = "./q3_images/"
+IMAGE_DIR = "./q3_sample_images/"
 IMAGE_1_NAME = "img_1.jpg"
 IMAGE_2_NAME = "img_2.jpg"
 IMAGE_3_NAME = "img_3.jpg"
