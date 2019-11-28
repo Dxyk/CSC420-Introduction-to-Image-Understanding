@@ -100,7 +100,12 @@ def part_a(img1, img2, indices, file_name):
     # Match img1 and img2.
     kp_1, kp_2, matches = detect_and_compute(img1, img2)
     hard_code_matches = [matches[i] for i in indices]
-    # al matches
+    # test code to manually pick matching points
+    # for idx in range(0, 20):
+    #     matched = cv2.drawMatches(img1, kp_1, img2, kp_2, [matches[idx]],
+    #                               None, flags=2)
+    #     cv2.imwrite(OUT_DIR + f"a_test{idx}.jpg", matched)
+    # all matches
     matched = cv2.drawMatches(img1, kp_1, img2, kp_2, matches[:20], None,
                               flags=2)
     cv2.imwrite(OUT_DIR + f"a_{file_name}.jpg", matched)
@@ -121,7 +126,7 @@ def part_a(img1, img2, indices, file_name):
 
 
 # ==================== Part b ====================
-def part_b(l_pts, r_pts):
+def part_b(l_pts, r_pts, full_matrix=True):
     """
     Using standard 8-point algorithm, calculate:
     - the fundamental matrix F12 for image pair (I1, I2).
@@ -136,14 +141,15 @@ def part_b(l_pts, r_pts):
             y_r * x_l, y_r * y_l, y_r,
             x_l, y_l, 1
         ])
-    u, s, vh = np.linalg.svd(A)
-    f = vh[-1, :]
+    u, s, vh = np.linalg.svd(A, full_matrices=full_matrix)
+    f = vh[-1]
     F = f.reshape((3, 3))
 
-    u, s, vh = np.linalg.svd(F, full_matrices=False)
-    s[-1] = 0
-    F = np.matmul(np.matmul(u, np.diag(s)), vh)
-    return F
+    u, s, vh = np.linalg.svd(F, full_matrices=full_matrix)
+    s[2] = 0
+    s = np.diag(s)
+    F = np.matmul(np.matmul(u, s), vh)
+    return F / F[2, 2]
 
 
 # ==================== Part c ====================
@@ -169,11 +175,16 @@ def part_c(img_r: np.ndarray, kp_l: np.ndarray, kp_r: np.ndarray,
     Using F12, calculate the epipolar lines in the right image for each of the 8
     points in the left image and plot them on the right image.
     """
-    lines = cv2.computeCorrespondEpilines(kp_r, 2, F)
+    lines = cv2.computeCorrespondEpilines(kp_l.reshape((-1, 1, 2)), 1, F)
     lines = lines.reshape(-1, 3)
-    img_2_with_lines = draw_lines(img_r, lines,
-                                  np.int32(kp_l), np.int32(kp_r))
-    cv2.imwrite(OUT_DIR + f"c_{file_name}_line.jpg", img_2_with_lines)
+    img_r_with_lines = draw_lines(img_r, lines, np.int32(kp_r), np.int32(kp_l))
+    cv2.imwrite(OUT_DIR + f"c_{file_name}_line.jpg", img_r_with_lines)
+
+    # lines = cv2.computeCorrespondEpilines(kp_l, 1, F)
+    # lines = lines.reshape(-1, 3)
+    # img_2_with_lines = draw_lines(img_r, lines,
+    #                               np.int32(kp_r), np.int32(kp_l))
+    # cv2.imwrite(OUT_DIR + f"c_{file_name}_line.jpg", img_2_with_lines)
     return lines
 
 
@@ -185,7 +196,12 @@ def part_d(r_image, l_kp, r_kp, F, file_name):
     - Do the same for I3 using F13.
     """
     ret, H_l, H_r = cv2.stereoRectifyUncalibrated(l_kp, r_kp, F, r_image.shape)
-    warped_img = cv2.warpPerspective(r_image, H_r, r_image.shape)
+    h, w = r_image.shape
+    t1 = np.array([1, 0, 800, 0, 1, 1500, 0, 0, 1]).reshape((3, 3))
+    # t2 = np.array([1, 0, -100, 0, 1, -100, 0, 0, 1]).reshape((3, 3))
+    H = t1.dot(H_r)
+
+    warped_img = cv2.warpPerspective(r_image, H, (h + 1500, w + 1500))
 
     cv2.imwrite(OUT_DIR + f"{file_name}_warped.jpg", warped_img)
 
@@ -197,7 +213,7 @@ def part_e(l_kps, r_kps):
     """
     ​Using OpenCV, compute F’12 and F’13 and compare with your results.
     """
-    F, mask = cv2.findFundamentalMat(l_kps, r_kps, cv2.FM_7POINT)
+    F, mask = cv2.findFundamentalMat(l_kps, r_kps, cv2.FM_8POINT)
     return F
 
 
@@ -235,18 +251,18 @@ if __name__ == '__main__':
     # Part b
     print("{0} Part B Start {0}".format("=" * 20))
     print("{0} Part B 1-2 {0}".format("=" * 10))
-    F_12 = part_b(kp_1_12, kp_2_12)
+    F_12 = part_b(kp_1_12, kp_2_12, full_matrix=True)
     # verify that all points multiplication close to 0
-    # for i in range(len(kp_1_12)):
-    #     pt_l = np.hstack([kp_1_12[i], 1])
-    #     pt_r = np.hstack([kp_2_12[i], 1])
-    #     print(np.matmul(np.matmul(pt_r.T, F_12), pt_l))
+    for i in range(len(kp_1_12)):
+        pt_l = np.hstack([kp_1_12[i], 1])
+        pt_r = np.hstack([kp_2_12[i], 1])
+        print(np.matmul(np.matmul(pt_r.T, F_12), pt_l))
     print("{0} Part B 1-3 {0}".format("=" * 10))
-    F_13 = part_b(kp_1_13, kp_3_13)
-    # for i in range(len(kp_1_13)):
-    #     pt_l = np.hstack([kp_1_13[i], 1])
-    #     pt_r = np.hstack([kp_3_13[i], 1])
-    #     print(np.matmul(np.matmul(pt_r.T, F_13), pt_l))
+    F_13 = part_b(kp_1_13, kp_3_13, full_matrix=False)
+    for i in range(len(kp_1_13)):
+        pt_l = np.hstack([kp_1_13[i], 1])
+        pt_r = np.hstack([kp_3_13[i], 1])
+        print(np.matmul(np.matmul(pt_r.T, F_13), pt_l))
     print("{0} Part B End {0}".format("=" * 20))
 
     # Part c
@@ -276,14 +292,17 @@ if __name__ == '__main__':
     #     pt_l = np.hstack([kp_1_13[i], 1])
     #     pt_r = np.hstack([kp_3_13[i], 1])
     #     print(np.matmul(np.matmul(pt_r.T, F_13_cv), pt_l))
-    print(f"F_12 vs F_12_cv:\n {F_12}\n {F_12_cv}")
-    print(f"F_13 vs F_13_cv:\n {F_13}\n {F_13_cv}")
+    print(f"F_12:\n{F_12}\nF_12_cv:\n{F_12_cv}")
+    print(f"F_13:\n{F_13}\nF_13_cv:\n{F_13_cv}")
     print("{0} Part E End {0}".format("=" * 20))
 
     # Part f
     print("{0} Part F Start {0}".format("=" * 20))
     print("{0} Part F 1-2 {0}".format("=" * 10))
     part_f(gray_img_2, kp_1_12, kp_2_12, F_12_cv, "f_img_2")
-    # print("{0} Part F 1-3 {0}".format("=" * 10))
-    # part_f(gray_img_3, kp_1_13, kp_3_13, F_13_cv, "f_img_3")
+    print("{0} Part F 1-3 {0}".format("=" * 10))
+    part_f(gray_img_3, kp_1_13, kp_3_13, F_13_cv, "f_img_3")
     print("{0} Part F Start {0}".format("=" * 20))
+
+    part_c(gray_img_2, kp_1_12, kp_2_12, F_12_cv, "image_2_cv")
+
