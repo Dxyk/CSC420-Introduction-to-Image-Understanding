@@ -1,2 +1,3 @@
-# CSC420-Assignments
-Assignments for CSC420
+# CSC420 Introduction to Image Understanding
+
+Assignments for CSC420 Introduction to Image Understanding
